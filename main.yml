@@ -16,6 +16,16 @@
         name: en_US.UTF-8
         state: present
 
+    # https://stackoverflow.com/a/26399105/157811
+    - name: get the username running the deploy
+      become: false
+      action: command whoami
+      register: current_username
+
+    - name: Set ansible_user fact
+      ansible.builtin.set_fact:
+        ansible_user: "{{ current_username.stdout }}"
+
     - name: Include playbook configuration.
       include_vars: "{{ item }}"
       with_fileglob:
@@ -48,7 +58,7 @@
     - name: Ensure directories exists.
       become: false
       file:
-        path: "~{{ ansible_user }}/{{ item }}"
+        path: "{{ ansible_user_dir }}/{{ item }}"
         recurse: yes
         state: directory
 
@@ -59,7 +69,7 @@
 
     - name: Dot config git directory.
       stat:
-        path: "~{{ ansible_user }}/.config/.git"
+        path: "{{ ansible_user_dir }}/.config/.git"
       register: dotconfig_git
 
   tasks:
@@ -73,7 +83,7 @@
       become: false
       command: "{{ item }}"
       args:
-        chdir: "~{{ ansible_user }}/.config"
+        chdir: "{{ ansible_user_dir }}/.config"
       with_items:
         - "git init"
         - "git remote add origin https://github.com/harryxu/dotconfig.git"

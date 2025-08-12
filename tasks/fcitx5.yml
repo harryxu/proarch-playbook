@@ -24,7 +24,7 @@
 
 - name: Ensure ~/.xprofile exists and configure Fcitx5 environment variables
   ansible.builtin.blockinfile:
-    path: "~{{ ansible_user }}/.xprofile"
+    path: "{{ ansible_user_dir }}/.xprofile"
     create: yes
     block: |
       export GTK_IM_MODULE=fcitx
@@ -33,13 +33,13 @@
 
 - name: Create autostart directory for the user
   ansible.builtin.file:
-    path: "~{{ ansible_user }}/.config/autostart"
+    path: "{{ ansible_user_dir }}/.config/autostart"
     state: directory
     mode: "0755"
 
 - name: Enable Fcitx5 autostart
   ansible.builtin.copy:
-    dest: "~{{ ansible_user }}/.config/autostart/fcitx5.desktop"
+    dest: "{{ ansible_user_dir }}/.config/autostart/fcitx5.desktop"
     mode: "0644"
     content: |
       [Desktop Entry]
