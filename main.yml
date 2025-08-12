@@ -98,3 +98,4 @@
       become_user: aur_builder
 
     - include_tasks: tasks/fcitx5.yml
+    - include_tasks: tasks/ulauncher.yml

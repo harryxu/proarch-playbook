@@ -1,0 +1,36 @@
+- name: Install ulauncher from AUR
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: ulauncher-git
+  become: true
+  become_user: aur_builder
+
+
+- name: Ensure ulauncher autostart directory exists
+  file:
+    path: "{{ ansible_env.HOME }}/.config/autostart"
+    state: directory
+    mode: '0755'
+
+- name: Enable ulauncher autostart by creating desktop file
+  copy:
+    dest: "{{ ansible_env.HOME }}/.config/autostart/ulauncher.desktop"
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Exec=ulauncher
+      Hidden=false
+      NoDisplay=false
+      X-GNOME-Autostart-enabled=true
+      Name=Ulauncher
+      Comment=Application launcher
+    mode: '0644'
+  become: false
+
+- name: Set custom keybinding for ulauncher toggle (Alt+E)
+  community.general.dconf:
+    key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ulauncher/"
+    value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
+    state: present
+    user: "{{ ansible_user }}"
