@@ -45,16 +45,10 @@
 
     - include_tasks: tasks/setup_aur.yml
 
-    # https://stackoverflow.com/a/26399105/157811
-    - name: get the username running the deploy
-      become: false
-      action: command whoami
-      register: current_username
-
     - name: Ensure directories exists.
       become: false
       file:
-        path: /home/{{ current_username.stdout }}/{{ item }}
+        path: "{{ ansible_env.HOME }}/{{ item }}"
         recurse: yes
         state: directory
 
@@ -65,7 +59,7 @@
 
     - name: Dot config git directory.
       stat:
-        path: /home/{{ current_username.stdout }}/.config/.git
+        path: "{{ ansible_env.HOME }}/.config/.git"
       register: dotconfig_git
 
   tasks:
@@ -79,7 +73,7 @@
       become: false
       command: "{{ item }}"
       args:
-        chdir: /home/{{ current_username.stdout }}/.config
+        chdir: "{{ ansible_env.HOME }}/.config"
       with_items:
         - "git init"
         - "git remote add origin https://github.com/harryxu/dotconfig.git"
@@ -89,7 +83,7 @@
 
     - name: Change user shell to fish
       user:
-        name: "{{ current_username.stdout }}"
+        name: "{{ ansible_user }}"
         shell: /usr/bin/fish
 
     - name: Install aur packages.
