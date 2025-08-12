@@ -30,18 +30,14 @@
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
-          'wqy-zenhei', 'wqy-microhei', 'ttf-jetbrains-mono'
+          'ttf-iosevka-nerd', 'ttf-iosevkaterm-nerd', 'ttf-ubuntu-mono-nerd', 'ttf-jetbrains-mono-nerd',
+          'ttf-jetbrains-mono',
+          'wqy-zenhei', 'wqy-microhei',
         ]
 
         state: present
 
-    # - name: Install nerd fonts from AUR using yay
-    #   become: yes
-    #   become_user: your_username
-    #   ansible.builtin.command: >
-    #     yay -S --noconfirm nerd-fonts-iosevka nerd-fonts-iosevka-term nerd-fonts-ubuntu-mono nerd-fonts-jetbrains-mono
-    #   args:
-    #     creates: /usr/share/fonts/nerd-fonts/  # 可以用路径做简单幂等判断
+    - include_tasks: tasks/setup_aur.yml
 
     # https://stackoverflow.com/a/26399105/157811
     - name: get the username running the deploy
@@ -67,26 +63,35 @@
       register: dotconfig_git
 
   tasks:
-
     - name: Enable and start sshd service
       ansible.builtin.systemd:
         name: sshd
         enabled: yes
         state: started
 
-    # - name: Setup dotconfig
-    #   become: false
-    #   command: "{{ item }}"
-    #   args:
-    #     chdir: /home/{{ current_username.stdout }}/.config
-    #   with_items:
-    #     - "git init"
-    #     - "git remote add origin git@github.com:harryxu/dotconfig.git"
-    #     - "git fetch"
-    #     - "git checkout origin/main -ft"
-    #   when: not dotconfig_git.stat.exists
+    - name: Setup dotconfig
+      become: false
+      command: "{{ item }}"
+      args:
+        chdir: /home/{{ current_username.stdout }}/.config
+      with_items:
+        - "git init"
+        - "git remote add origin git@github.com:harryxu/dotconfig.git"
+        - "git fetch"
+        - "git checkout origin/main -ft"
+      when: not dotconfig_git.stat.exists
 
     - name: Change user shell to fish
       user:
         name: "{{ current_username.stdout }}"
         shell: /usr/bin/fish
+
+    - name: Install aur packages.
+      kewlfft.aur.aur:
+        use: yay
+        state: present
+        name:
+          - google-chrome
+          - visual-studio-code-bin
+      become: yes
+      become_user: aur_builder
