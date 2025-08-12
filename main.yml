@@ -58,7 +58,7 @@
     - name: Ensure directories exists.
       become: false
       file:
-        path: "{{ ansible_user_dir }}/{{ item }}"
+        path: "/home/{{ ansible_user }}/{{ item }}"
         recurse: yes
         state: directory
 
@@ -69,7 +69,7 @@
 
     - name: Dot config git directory.
       stat:
-        path: "{{ ansible_user_dir }}/.config/.git"
+        path: "/home/{{ ansible_user }}/.config/.git"
       register: dotconfig_git
 
   tasks:
@@ -83,7 +83,7 @@
       become: false
       command: "{{ item }}"
       args:
-        chdir: "{{ ansible_user_dir }}/.config"
+        chdir: "/home/{{ ansible_user }}/.config"
       with_items:
         - "git init"
         - "git remote add origin https://github.com/harryxu/dotconfig.git"

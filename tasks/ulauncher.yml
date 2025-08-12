@@ -9,13 +9,13 @@
 
 - name: Ensure ulauncher autostart directory exists
   file:
-    path: "{{ ansible_user_dir }}/.config/autostart"
+    path: "/home/{{ ansible_user }}/.config/autostart"
     state: directory
     mode: '0755'
 
 - name: Enable ulauncher autostart by creating desktop file
   copy:
-    dest: "{{ ansible_user_dir }}/.config/autostart/ulauncher.desktop"
+    dest: "/home/{{ ansible_user }}/.config/autostart/ulauncher.desktop"
     content: |
       [Desktop Entry]
       Type=Application
