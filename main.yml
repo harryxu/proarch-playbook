@@ -27,7 +27,7 @@
         name: [
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
           'fish', 'vim', 'neovim', 'tmux', 'lazygit',
-          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
+          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
 
           # dev envs
           'go', 'nodejs', 'npm',
