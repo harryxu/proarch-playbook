@@ -1,0 +1,51 @@
+---
+- name: Install Fcitx5 and Chinese addons
+  community.general.pacman:
+    update_cache: yes
+    name:
+      [
+        "fcitx5",
+        "fcitx5-configtool",
+        "fcitx5-gtk",
+        "fcitx5-qt",
+        "fcitx5-chinese-addons",
+        "fcitx5-pinyin-zhwiki",
+        "fcitx5-material-color",
+      ]
+    state: present
+
+- name: Install KDE kimpanel protocol for gnome shell.
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: ["gnome-shell-extension-kimpanel-git"]
+  become: true
+  become_user: aur_builder
+
+- name: Ensure ~/.xprofile exists and configure Fcitx5 environment variables
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.xprofile"
+    create: yes
+    block: |
+      export GTK_IM_MODULE=fcitx
+      export QT_IM_MODULE=fcitx
+      export XMODIFIERS="@im=fcitx"
+
+- name: Create autostart directory for the user
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/autostart"
+    state: directory
+    mode: "0755"
+
+- name: Enable Fcitx5 autostart
+  ansible.builtin.copy:
+    dest: "{{ ansible_env.HOME }}/.config/autostart/fcitx5.desktop"
+    mode: "0644"
+    content: |
+      [Desktop Entry]
+      Type=Application
+      Exec=fcitx5
+      Hidden=false
+      X-GNOME-Autostart-enabled=true
+      Name=Fcitx 5
+      Comment=Start Fcitx 5 input method

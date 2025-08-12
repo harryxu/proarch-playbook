@@ -30,7 +30,7 @@
           'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
 
           # dev envs
-          'go', 'nodejs',
+          'go', 'nodejs', 'npm',
 
           # apps
           'gnome-tweaks', 'ghostty',
@@ -100,5 +100,7 @@
           'google-chrome', 'visual-studio-code-bin',
           'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
         ]
-      become: yes
+      become: true
       become_user: aur_builder
+
+    - include_tasks: tasks/fcitx5.yml
