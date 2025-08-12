@@ -97,8 +97,8 @@
         use: yay
         state: present
         name: [
-          'gnome-shell-extension-dash-to-dock',
-          'google-chrome', 'visual-studio-code-bin'
+          'google-chrome', 'visual-studio-code-bin',
+          'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
         ]
       become: yes
       become_user: aur_builder
