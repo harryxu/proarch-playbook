@@ -6,12 +6,11 @@
   become: true
   become_user: aur_builder
 
-
 - name: Ensure ulauncher autostart directory exists
   file:
     path: "/home/{{ ansible_user }}/.config/autostart"
     state: directory
-    mode: '0755'
+    mode: "0755"
   become: false
 
 - name: Enable ulauncher autostart by creating desktop file
@@ -26,13 +25,12 @@
       X-GNOME-Autostart-enabled=true
       Name=Ulauncher
       Comment=Application launcher
-    mode: '0644'
+    mode: "0644"
   become: false
 
 - name: Set custom keybinding for ulauncher toggle (Alt+E)
   community.general.dconf:
-    key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ulauncher/"
+    key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ulauncher"
     value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
     state: present
-    user: "{{ ansible_user }}"
   become: false
