@@ -27,10 +27,10 @@
         name: [
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
           'fish', 'vim', 'neovim', 'tmux', 'lazygit',
-          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
+          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
 
           # dev envs
-          'go', 'nodejs',
+          'go', 'nodejs', 'npm',
 
           # apps
           'gnome-tweaks', 'ghostty',
@@ -100,5 +100,7 @@
           'google-chrome', 'visual-studio-code-bin',
           'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
         ]
-      become: yes
+      become: true
       become_user: aur_builder
+
+    - include_tasks: tasks/fcitx5.yml
