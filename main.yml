@@ -35,13 +35,13 @@
 
         state: present
 
-    - name: Install nerd fonts from AUR using yay
-      become: yes
-      become_user: your_username  # 替换为普通用户，AUR 需要普通用户权限
-      ansible.builtin.command: >
-        yay -S --noconfirm nerd-fonts-iosevka nerd-fonts-iosevka-term nerd-fonts-ubuntu-mono nerd-fonts-jetbrains-mono
-      args:
-        creates: /usr/share/fonts/nerd-fonts/  # 可以用路径做简单幂等判断
+    # - name: Install nerd fonts from AUR using yay
+    #   become: yes
+    #   become_user: your_username
+    #   ansible.builtin.command: >
+    #     yay -S --noconfirm nerd-fonts-iosevka nerd-fonts-iosevka-term nerd-fonts-ubuntu-mono nerd-fonts-jetbrains-mono
+    #   args:
+    #     creates: /usr/share/fonts/nerd-fonts/  # 可以用路径做简单幂等判断
 
     # https://stackoverflow.com/a/26399105/157811
     - name: get the username running the deploy
