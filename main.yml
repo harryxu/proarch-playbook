@@ -25,14 +25,20 @@
       community.general.pacman:
         update_cache: true
         name: [
-          'git', 'vim', 'neovim', 'tmux', 'zip', 'unzip', 'base-devel', 'cmake',
-          'openssh', 'fzf', 'gnupg', 'curl', 'net-tools', 'fish',
+          'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
+          'fish', 'vim', 'neovim', 'tmux',
+          'top', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
+
+          # dev envs
+          'go', 'nodejs',
+
+          # apps
+          'gnome-tweaks', 'ghostty',
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
           'ttf-iosevka-nerd', 'ttf-iosevkaterm-nerd', 'ttf-ubuntu-mono-nerd', 'ttf-jetbrains-mono-nerd',
-          'ttf-jetbrains-mono',
-          'wqy-zenhei', 'wqy-microhei',
+          'ttf-jetbrains-mono', 'wqy-zenhei', 'wqy-microhei',
         ]
 
         state: present
@@ -76,7 +82,7 @@
         chdir: /home/{{ current_username.stdout }}/.config
       with_items:
         - "git init"
-        - "git remote add origin git@github.com:harryxu/dotconfig.git"
+        - "git remote add origin https://github.com/harryxu/dotconfig.git"
         - "git fetch"
         - "git checkout origin/main -ft"
       when: not dotconfig_git.stat.exists
@@ -90,8 +96,9 @@
       kewlfft.aur.aur:
         use: yay
         state: present
-        name:
-          - google-chrome
-          - visual-studio-code-bin
+        name: [
+          'gnome-shell-extension-dash-to-dock',
+          'google-chrome', 'visual-studio-code-bin'
+        ]
       become: yes
       become_user: aur_builder
