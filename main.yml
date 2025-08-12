@@ -21,19 +21,27 @@
       with_fileglob:
         - "{{ playbook_dir }}/config.yml"
 
-    - name: Apt Install required softwares
-      apt:
+    - name: Install required packages on Arch
+      community.general.pacman:
         update_cache: true
-        cache_valid_time: 3600
-        pkg: ['git', 'vim', 'tmux', 'zip', 'unzip', 'build-essential', 'cmake', 'fzf', 'gnupg2',
-              'flatpak', 'gnome-software-plugin-flatpak',
-              'curl', 'net-tools', 'apt-transport-https', 'ca-certificates']
+        name: [
+          'git', 'vim', 'neovim', 'tmux', 'zip', 'unzip', 'base-devel', 'cmake',
+          'openssh', 'fzf', 'gnupg', 'curl', 'net-tools', 'fish',
+
+          # Fonts
+          'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
+          'wqy-zenhei', 'wqy-microhei', 'ttf-jetbrains-mono'
+        ]
+
         state: present
 
-    - name: Install nvim use snap.
-      community.general.snap:
-        name: nvim
-        classic: true
+    - name: Install nerd fonts from AUR using yay
+      become: yes
+      become_user: your_username  # 替换为普通用户，AUR 需要普通用户权限
+      ansible.builtin.command: >
+        yay -S --noconfirm nerd-fonts-iosevka nerd-fonts-iosevka-term nerd-fonts-ubuntu-mono nerd-fonts-jetbrains-mono
+      args:
+        creates: /usr/share/fonts/nerd-fonts/  # 可以用路径做简单幂等判断
 
     # https://stackoverflow.com/a/26399105/157811
     - name: get the username running the deploy
@@ -58,25 +66,25 @@
         path: /home/{{ current_username.stdout }}/.config/.git
       register: dotconfig_git
 
-    - include_tasks: tasks/fishshell.yml
-
-
   tasks:
-    - include_tasks: tasks/zoxide.yml
-    - include_tasks: tasks/fonts.yml
-    - include_tasks: tasks/kitty.yml
 
-    - name: Setup dotconfig
-      become: false
-      command: "{{ item }}"
-      args:
-        chdir: /home/{{ current_username.stdout }}/.config
-      with_items:
-        - "git init"
-        - "git remote add origin git@github.com:harryxu/dotconfig.git"
-        - "git fetch"
-        - "git checkout origin/main -ft"
-      when: not dotconfig_git.stat.exists
+    - name: Enable and start sshd service
+      ansible.builtin.systemd:
+        name: sshd
+        enabled: yes
+        state: started
+
+    # - name: Setup dotconfig
+    #   become: false
+    #   command: "{{ item }}"
+    #   args:
+    #     chdir: /home/{{ current_username.stdout }}/.config
+    #   with_items:
+    #     - "git init"
+    #     - "git remote add origin git@github.com:harryxu/dotconfig.git"
+    #     - "git fetch"
+    #     - "git checkout origin/main -ft"
+    #   when: not dotconfig_git.stat.exists
 
     - name: Change user shell to fish
       user:

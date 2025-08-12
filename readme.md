@@ -1,15 +1,12 @@
 # Prountu
-Configure an Ubuntu desktop into a suitable development environment for programmers.
+Configure an Arch Linux desktop into a suitable development environment for programmers.
 
 ## Usage
 
-### [Installing Ansible](https://docs.ansible.com/ansible/latest/installation_guide/installation_distros.html#installing-ansible-on-ubuntu) on Ubuntu
+### [Installing Ansible](https://docs.ansible.com/ansible/latest/installation_guide/installation_distros.html#installing-ansible-on-arch-linux) on Arch Linux.
 
 ```shell
-sudo apt update
-sudo apt install software-properties-common
-sudo add-apt-repository --yes --update ppa:ansible/ansible
-sudo apt install ansible
+sudo pacman -S ansible
 ```
 
 ### Run Ansible commands inside this directory.
