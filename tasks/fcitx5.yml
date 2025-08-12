@@ -30,12 +30,14 @@
       export GTK_IM_MODULE=fcitx
       export QT_IM_MODULE=fcitx
       export XMODIFIERS="@im=fcitx"
+  become: false
 
 - name: Create autostart directory for the user
   ansible.builtin.file:
     path: "/home/{{ ansible_user }}/.config/autostart"
     state: directory
     mode: "0755"
+  become: false
 
 - name: Enable Fcitx5 autostart
   ansible.builtin.copy:
@@ -49,3 +51,4 @@
       X-GNOME-Autostart-enabled=true
       Name=Fcitx 5
       Comment=Start Fcitx 5 input method
+  become: false

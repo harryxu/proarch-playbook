@@ -12,6 +12,7 @@
     path: "/home/{{ ansible_user }}/.config/autostart"
     state: directory
     mode: '0755'
+  become: false
 
 - name: Enable ulauncher autostart by creating desktop file
   copy:
@@ -34,3 +35,4 @@
     value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
     state: present
     user: "{{ ansible_user }}"
+  become: false
