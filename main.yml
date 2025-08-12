@@ -26,8 +26,8 @@
         update_cache: true
         name: [
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
-          'fish', 'vim', 'neovim', 'tmux',
-          'top', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
+          'fish', 'vim', 'neovim', 'tmux', 'lazygit',
+          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep',
 
           # dev envs
           'go', 'nodejs',
