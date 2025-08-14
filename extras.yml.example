@@ -1,0 +1,2 @@
+---
+- include_tasks: tasks/extra_snapper.yml

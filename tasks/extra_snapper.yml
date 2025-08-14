@@ -1,0 +1,6 @@
+---
+- name: Install snapper related packages
+  community.general.pacman:
+    update_cache: true
+    name: ["snapper", "snap-pac", "grub-btrfs"]
+    state: present

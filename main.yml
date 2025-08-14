@@ -36,7 +36,7 @@
         update_cache: true
         name: [
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
-          'fish', 'vim', 'neovim', 'tmux', 'lazygit', 'snapper',
+          'fish', 'vim', 'neovim', 'tmux', 'lazygit',
           'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
 
           # dev envs
@@ -109,3 +109,13 @@
 
     - include_tasks: tasks/fcitx5.yml
     - include_tasks: tasks/ulauncher.yml
+
+    - name: Check if extras.yml exists
+      stat:
+        path: "{{ playbook_dir }}/extras.yml"
+      register: extras_file
+
+    - name: Include extras.yml if it exists
+      include_tasks: extras.yml
+      when: extras_file.stat.exists
+
