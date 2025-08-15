@@ -1,6 +1,33 @@
 ---
-- name: Install snapper related packages
-  community.general.pacman:
-    update_cache: true
-    name: ["snapper", "snap-pac", "grub-btrfs"]
-    state: present
+- name: Configure Btrfs snapshots with Snapper
+  vars:
+    snapper_config_name: "root"
+    snapper_config_path: "/etc/snapper/configs/{{ snapper_config_name }}"
+
+  block:
+    - name: 1. Install Snapper, snap-pac, and grub-btrfs
+      community.general.pacman:
+        name:
+          - snapper
+          - snap-pac
+          - grub-btrfs
+        state: present
+        update_cache: true
+
+    - name: 2. Create Snapper config for the root subvolume
+      command: "snapper -c {{ snapper_config_name }} create-config /"
+      args:
+        creates: "{{ snapper_config_path }}"
+
+    - name: 3. Ensure timeline snapshots are enabled in the root config
+      lineinfile:
+        path: "{{ snapper_config_path }}"
+        regexp: "^TIMELINE_CREATE="
+        line: 'TIMELINE_CREATE="yes"'
+        state: present
+
+    - name: 4. Enable and start the grub-btrfsd service
+      systemd_service:
+        name: grub-btrfsd.service
+        enabled: true
+        state: started
