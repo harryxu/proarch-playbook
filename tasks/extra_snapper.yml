@@ -11,6 +11,7 @@
           - snapper
           - snap-pac
           - grub-btrfs
+          - inotify-tools
         state: present
         update_cache: true
 
