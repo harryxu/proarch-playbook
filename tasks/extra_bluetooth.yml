@@ -1,0 +1,17 @@
+---
+- name: Bluetooth driver.
+
+  block:
+    - name: 1. Install Bluetooth packages.
+      community.general.pacman:
+        name:
+          - bluez
+          - bluez-utils
+        state: present
+        update_cache: true
+
+    - name: 2. Enable and start the bluetooth service
+      systemd_service:
+        name: bluetooth.service
+        enabled: true
+        state: started
