@@ -43,7 +43,10 @@
           'go', 'nodejs', 'npm',
 
           # apps
-          'gnome-tweaks', 'ghostty',
+          'gnome-tweaks', 'ghostty', 
+          
+          # gnome shell extensions
+          'gnome-shell-extension-appindicator',
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
