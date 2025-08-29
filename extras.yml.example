@@ -1,3 +1,4 @@
 ---
 - include_tasks: tasks/extra_snapper.yml
+- include_tasks: tasks/extra_keybindings.yml
 - include_tasks: tasks/extra_bluetooth.yml
