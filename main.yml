@@ -112,6 +112,16 @@
       become: true
       become_user: aur_builder
 
+    - name: Set custom environment variables in fish config
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user }}/.config/fish/conf.d/custom.fish"
+        content: |
+          # Set the default browser for applications launched from this shell
+          set -gx BROWSER 'google-chrome-stable'
+        mode: '0664'
+        force: false
+      when: dotconfig_git.stat.exists
+
     - include_tasks: tasks/fcitx5.yml
     - include_tasks: tasks/ulauncher.yml
 
