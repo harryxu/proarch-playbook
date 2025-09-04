@@ -45,10 +45,7 @@
           'go', 'nodejs', 'npm',
 
           # apps
-          'gnome-tweaks', 'ghostty', 'gitg',
-
-          # gnome shell extensions
-          'gnome-shell-extension-appindicator',
+          'ghostty', 'gitg',
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
@@ -107,9 +104,6 @@
         state: present
         name: [
           'google-chrome', 'visual-studio-code-bin', 'crow-translate',
-          'extension-manager', 'gnome-shell-extension-just-perfection-desktop',
-          'gnome-shell-extension-notification-configurator-git',
-          'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
         ]
       become: true
       become_user: aur_builder
@@ -126,6 +120,7 @@
 
     - include_tasks: tasks/fcitx5.yml
     - include_tasks: tasks/ulauncher.yml
+    - include_tasks: tasks/kde.yml
 
     - name: Check if extras.yml exists
       stat:

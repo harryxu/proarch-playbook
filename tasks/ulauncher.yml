@@ -28,9 +28,3 @@
     mode: "0644"
   become: false
 
-- name: Set custom keybinding for ulauncher toggle (Alt+E)
-  community.general.dconf:
-    key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ulauncher"
-    value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
-    state: present
-  become: false

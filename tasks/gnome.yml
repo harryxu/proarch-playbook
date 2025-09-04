@@ -1,0 +1,29 @@
+---
+
+- name: Install gnome apps
+  community.general.pacman:
+    update_cache: true
+    name: [
+      'gnome-shell-extension-appindicator',
+      'gnome-tweaks',
+    ]
+    state: present
+
+- name: Install gnome app from aur.
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: [
+      'extension-manager', 'gnome-shell-extension-just-perfection-desktop',
+      'gnome-shell-extension-notification-configurator-git',
+      'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
+    ]
+  become: true
+  become_user: aur_builder
+
+- name: Set custom keybinding for ulauncher toggle (Alt+E)
+  community.general.dconf:
+    key: "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/ulauncher"
+    value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
+    state: present
+  become: false

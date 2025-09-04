@@ -1,0 +1,37 @@
+---
+- name: Setup KDE theme
+  become: false
+  block:
+    - name: Check if Graphite KDE theme is installed
+      stat:
+        path: "/home/{{ ansible_user }}/.local/share/plasma/desktoptheme/Graphite"
+      register: graphite_installed
+
+    - name: Clone Graphite KDE theme.
+      git:
+        repo: 'https://github.com/vinceliuice/Graphite-kde-theme.git'
+        dest: '/tmp/Graphite-kde-theme'
+        clone: yes
+        update: yes
+      when: not graphite_installed.stat.exists
+
+    - name: Install Graphite KDE theme.
+      shell: |
+        cd /tmp/Graphite-kde-theme
+        ./install.sh
+      args:
+        chdir: /tmp/Graphite-kde-theme
+      when: not graphite_installed.stat.exists
+
+    - name: Enable theme
+      shell: |
+        plasma-apply-desktoptheme Graphite-nord-light
+
+    - name: KWinrc
+      community.general.kdeconfig:
+        path: "/home/{{ ansible_user }}/.config/kwinrc"
+        values:
+          - groups: [org.kde.kdecoration2]
+            key: theme
+            value: __aurorae__svg__Graphite-light
+        backup: true
