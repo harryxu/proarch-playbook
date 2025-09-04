@@ -39,6 +39,8 @@
           'fish', 'vim', 'neovim', 'tmux', 'lazygit',
           'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
 
+          'gtk-layer-shell',
+
           # dev envs
           'go', 'nodejs', 'npm',
 
@@ -104,7 +106,7 @@
         use: yay
         state: present
         name: [
-          'google-chrome', 'visual-studio-code-bin',
+          'google-chrome', 'visual-studio-code-bin', 'crow-translate',
           'extension-manager', 'gnome-shell-extension-just-perfection-desktop',
           'gnome-shell-extension-notification-configurator-git',
           'gnome-shell-extension-dash-to-dock', 'gnome-shell-extension-wallpaper-slideshow'
@@ -133,4 +135,3 @@
     - name: Include extras.yml if it exists
       include_tasks: extras.yml
       when: extras_file.stat.exists
-
