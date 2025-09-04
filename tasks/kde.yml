@@ -35,3 +35,33 @@
             key: theme
             value: __aurorae__svg__Graphite-light
         backup: true
+
+    - name: Check if Tela Circle Icon theme is installed
+      stat:
+        path: "/home/{{ ansible_user }}/.local/share/icons/Tela-circle"
+      register: tela_icon_installed
+
+    - name: Clone Tela Circle Icon theme.
+      git:
+        repo: 'https://github.com/vinceliuice/Tela-circle-icon-theme.git'
+        dest: '/tmp/Tela-circle-icon-theme'
+        clone: yes
+        update: yes
+      when: not tela_icon_installed.stat.exists
+
+    - name: Install Tela Circle Icon theme.
+      shell: |
+        cd /tmp/Tela-circle-icon-theme
+        ./install.sh
+      args:
+        chdir: /tmp/Tela-circle-icon-theme
+      when: not tela_icon_installed.stat.exists
+
+    - name: Setup kdeglobals
+      community.general.kdeconfig:
+        path: "/home/{{ ansible_user }}/.config/kdeglobals"
+        values:
+          - groups: [Icons]
+            key: Theme
+            value: Tela-circle
+        backup: true

@@ -7,7 +7,7 @@ sync-gdm:
 	@sudo chown gdm:gdm $(GDM_MONITORS_XML)
 
 kde-reload:
-    systemctl --user restart plasma-plasmashell.service
-    qdbus org.kde.KWin /KWin reconfigure
+	systemctl --user restart plasma-plasmashell.service && \
+	qdbus org.kde.KWin /KWin reconfigure
 
 .PHONY: sync-monitors
