@@ -1,4 +1,13 @@
 ---
+- name: Install KDE Apps from aur.
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: [
+      "konsave"
+    ]
+  become: true
+  become_user: aur_builder
 - name: Setup KDE theme
   become: false
   block:
