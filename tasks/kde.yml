@@ -9,8 +9,8 @@
 
     - name: Clone Graphite KDE theme.
       git:
-        repo: 'https://github.com/vinceliuice/Graphite-kde-theme.git'
-        dest: '/tmp/Graphite-kde-theme'
+        repo: "https://github.com/vinceliuice/Graphite-kde-theme.git"
+        dest: "/tmp/Graphite-kde-theme"
         clone: yes
         update: yes
       when: not graphite_installed.stat.exists
@@ -29,6 +29,7 @@
 
     - name: KWinrc
       community.general.kdeconfig:
+        kwriteconfig_path: /usr/bin/kwriteconfig6
         path: "/home/{{ ansible_user }}/.config/kwinrc"
         values:
           - groups: [org.kde.kdecoration2]
@@ -43,8 +44,8 @@
 
     - name: Clone Tela Circle Icon theme.
       git:
-        repo: 'https://github.com/vinceliuice/Tela-circle-icon-theme.git'
-        dest: '/tmp/Tela-circle-icon-theme'
+        repo: "https://github.com/vinceliuice/Tela-circle-icon-theme.git"
+        dest: "/tmp/Tela-circle-icon-theme"
         clone: yes
         update: yes
       when: not tela_icon_installed.stat.exists
@@ -59,6 +60,7 @@
 
     - name: Setup kdeglobals
       community.general.kdeconfig:
+        kwriteconfig_path: /usr/bin/kwriteconfig6
         path: "/home/{{ ansible_user }}/.config/kdeglobals"
         values:
           - groups: [Icons]
