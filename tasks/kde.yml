@@ -8,6 +8,7 @@
     ]
   become: true
   become_user: aur_builder
+
 - name: Setup KDE theme
   become: false
   block:
@@ -36,14 +37,22 @@
       shell: |
         plasma-apply-desktoptheme Graphite-nord-light
 
-    - name: KWinrc
+    - name: kwinrc
       community.general.kdeconfig:
         kwriteconfig_path: /usr/bin/kwriteconfig6
         path: "/home/{{ ansible_user }}/.config/kwinrc"
-        values:
-          - groups: [org.kde.kdecoration2]
-            key: theme
-            value: __aurorae__svg__Graphite-light
+        values: [
+          # window theme
+          { groups: [org.kde.kdecoration2], key: theme, value: __aurorae__svg__Graphite-light },
+
+          # task switch
+          { group: TabBox, key: ApplicationsMode, value: 1 },
+          { group: TabBox, key: HighlightWindows, bool_value: false },
+          { group: TabBox, key: LayoutName, value: big_icons },
+
+          # Virtual Desktop
+          { group: Desktops, key: Number, value: 5 },
+        ]
         backup: true
 
     - name: Check if Tela Circle Icon theme is installed
