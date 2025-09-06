@@ -1,4 +1,5 @@
 # Prountu
+
 Configure an Arch Linux desktop into a suitable development environment for programmers.
 
 ## Usage
@@ -11,6 +12,13 @@ sudo pacman -S ansible
 
 ### Run Ansible commands inside this directory.
 
- * `ansible-galaxy install -r requirements.yml`
- * `ansible-playbook main.yml`
+- `ansible-galaxy install -r requirements.yml`
+- `ansible-playbook main.yml`
 
+## Install optional packages.
+
+### OneDrive
+
+```
+yay -S onedrive-abraunegg onedrivegui
+```

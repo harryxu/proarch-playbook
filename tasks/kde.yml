@@ -1,11 +1,18 @@
 ---
+
+- name: Install KDE packages.
+  community.general.pacman:
+    update_cache: true
+    name: [
+      "kdiff3", "kommit"
+    ]
+    state: present
+
 - name: Install KDE Apps from aur.
   kewlfft.aur.aur:
     use: yay
     state: present
-    name: [
-      "konsave"
-    ]
+    name: ["konsave"]
   become: true
   become_user: aur_builder
 
@@ -21,8 +28,8 @@
       git:
         repo: "https://github.com/vinceliuice/Graphite-kde-theme.git"
         dest: "/tmp/Graphite-kde-theme"
-        clone: yes
-        update: yes
+        clone: true
+        update: true
       when: not graphite_installed.stat.exists
 
     - name: Install Graphite KDE theme.
@@ -43,7 +50,11 @@
         path: "/home/{{ ansible_user }}/.config/kwinrc"
         values: [
           # window theme
-          { groups: [org.kde.kdecoration2], key: theme, value: __aurorae__svg__Graphite-light },
+          {
+            groups: [org.kde.kdecoration2],
+            key: theme,
+            value: __aurorae__svg__Graphite-light,
+          },
 
           # task switch
           { group: TabBox, key: ApplicationsMode, value: 1 },
@@ -64,8 +75,8 @@
       git:
         repo: "https://github.com/vinceliuice/Tela-circle-icon-theme.git"
         dest: "/tmp/Tela-circle-icon-theme"
-        clone: yes
-        update: yes
+        clone: true
+        update: true
       when: not tela_icon_installed.stat.exists
 
     - name: Install Tela Circle Icon theme.
