@@ -4,7 +4,7 @@
   community.general.pacman:
     update_cache: true
     name: [
-      "kdiff3", "kommit"
+      "kdiff3", "kommit", "kvantum"
     ]
     state: present
 
