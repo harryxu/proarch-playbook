@@ -45,7 +45,7 @@
           'go', 'nodejs', 'npm',
 
           # apps
-          'ghostty', 'vlc',
+          'zed', 'ghostty', 'vlc',
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
