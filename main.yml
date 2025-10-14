@@ -45,7 +45,7 @@
           'go', 'nodejs', 'npm',
 
           # apps
-          'zed', 'ghostty', 'vlc', 'keyd',
+          'zed', 'ghostty', 'vlc',
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'ttf-font-awesome',
@@ -82,7 +82,6 @@
         state: started
       loop:
         - sshd
-        - keyd
 
     - name: Setup dotconfig
       become: false

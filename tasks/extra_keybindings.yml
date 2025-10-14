@@ -1,20 +1,34 @@
 ---
-- name: GNOME desktop keybindings
-  become: false
-  community.general.dconf:
-    key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"
-    value: "{{ item.value }}"
-  loop:
-    - { key: "switch-applications", value: "['<Alt>Tab']" }
-    - { key: "switch-applications-backward", value: "['<Shift><Alt>Tab']" }
-    - { key: "switch-to-workspace-left", value: "['<Shift><Super>Tab']" }
-    - { key: "switch-to-workspace-right", value: "['<Super>Tab']" }
+- name: Install keyd package
+  community.general.pacman:
+    update_cache: true
+    name: ['keyd']
 
+    state: present
 
-- name: GNOME shell keybindings
-  become: false
-  community.general.dconf:
-    key: "/org/gnome/shell/keybindings/{{ item.key }}"
-    value: "{{ item.value }}"
-  loop:
-    - { key: "show-screenshot-ui", value: "['<Control><Alt>a']"}
+- name: Ensure keyd services are started and enabled
+  ansible.builtin.systemd:
+    name: keyd
+    enabled: yes
+    state: started
+
+- name: Deploy keyd default configuration
+  copy:
+    dest: /etc/keyd/default.conf
+    content: |
+      [ids]
+      *
+
+      [alt]
+
+      x = C-x
+      c = C-c
+      v = C-v
+
+      a = C-a
+      f = C-f
+      r = C-r
+      z = C-z
+    owner: root
+    group: root
+    mode: '0644'
