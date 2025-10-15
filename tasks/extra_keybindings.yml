@@ -1,16 +1,11 @@
 ---
-- name: Install keyd package
-  community.general.pacman:
-    update_cache: true
-    name: ['keyd']
-
-    state: present
-
-- name: Ensure keyd services are started and enabled
-  ansible.builtin.systemd:
-    name: keyd
-    enabled: yes
-    state: started
+- name: Ensure /etc/keyd directory exists
+  file:
+    path: /etc/keyd
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
 - name: Deploy keyd default configuration
   copy:
@@ -19,16 +14,36 @@
       [ids]
       *
 
-      [alt]
+      [control+alt]
+      a = C-A-a
 
+      [alt]
       x = C-x
       c = C-c
       v = C-v
-
       a = C-a
       f = C-f
       r = C-r
       z = C-z
+      s = C-s
     owner: root
     group: root
     mode: '0644'
+
+- name: Install keyd package
+  community.general.pacman:
+    update_cache: true
+    name: ['keyd']
+    state: present
+
+- name: Ensure keyd services are started and enabled
+  ansible.builtin.systemd:
+    name: keyd
+    enabled: yes
+    state: started
+
+- name: Add current user to keyd group
+  user:
+    name: "{{ ansible_user }}"
+    groups: keyd
+    append: true
