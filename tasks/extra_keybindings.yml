@@ -47,3 +47,36 @@
     name: "{{ ansible_user }}"
     groups: keyd
     append: true
+
+- name: Ensure the systemd user directory exists
+  become: false
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.config/systemd/user"
+    state: directory
+    mode: '0755'
+
+- name: Create the keyd-application-mapper systemd user service file
+  become: false
+  ansible.builtin.copy:
+    dest: "/home/{{ ansible_user }}/.config/systemd/user/keyd-application-mapper.service"
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Keyd Application Mapper Daemon
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/keyd-application-mapper
+      Restart=always
+      RestartSec=3
+
+      [Install]
+      WantedBy=default.target
+
+- name: Enable and start the keyd-application-mapper service
+  become: false
+  ansible.builtin.systemd_service:
+    name: "keyd-application-mapper"
+    scope: user
+    enabled: true
+    state: started
