@@ -1,4 +1,4 @@
-# Prountu
+# Proarch
 
 Configure an Arch Linux desktop into a suitable development environment for programmers.
 
@@ -14,11 +14,3 @@ sudo pacman -S ansible
 
 - `ansible-galaxy install -r requirements.yml`
 - `ansible-playbook main.yml`
-
-## Install optional packages.
-
-### OneDrive
-
-```
-yay -S onedrive-abraunegg onedrivegui
-```
