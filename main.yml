@@ -75,11 +75,13 @@
       register: dotconfig_git
 
   tasks:
-    - name: Enable and start sshd service
+    - name: Ensure required services are started and enabled
       ansible.builtin.systemd:
-        name: sshd
+        name: "{{ item }}"
         enabled: yes
         state: started
+      loop:
+        - sshd
 
     - name: Setup dotconfig
       become: false

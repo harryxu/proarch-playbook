@@ -32,3 +32,15 @@
         name: grub-btrfsd.service
         enabled: true
         state: started
+
+    - name: 5. Enable and start snapper-timeline.timer
+      ansible.builtin.systemd:
+        name: snapper-timeline.timer
+        enabled: true
+        state: started
+
+    - name: 6. Enable and start snapper-cleanup.timer
+      ansible.builtin.systemd:
+        name: snapper-cleanup.timer
+        enabled: true
+        state: started

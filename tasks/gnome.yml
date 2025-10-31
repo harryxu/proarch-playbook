@@ -26,3 +26,23 @@
     value: "{'name': 'Ulauncher Toggle', 'binding': '<Alt>e', 'command': 'ulauncher-toggle'}"
     state: present
   become: false
+
+- name: GNOME desktop keybindings
+  become: false
+  community.general.dconf:
+    key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"
+    value: "{{ item.value }}"
+  loop:
+    - { key: "switch-applications", value: "['<Alt>Tab']" }
+    - { key: "switch-applications-backward", value: "['<Shift><Alt>Tab']" }
+    - { key: "switch-to-workspace-left", value: "['<Shift><Super>Tab']" }
+    - { key: "switch-to-workspace-right", value: "['<Super>Tab']" }
+
+
+- name: GNOME shell keybindings
+  become: false
+  community.general.dconf:
+    key: "/org/gnome/shell/keybindings/{{ item.key }}"
+    value: "{{ item.value }}"
+  loop:
+    - { key: "show-screenshot-ui", value: "['<Control><Alt>a']"}

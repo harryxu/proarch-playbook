@@ -1,20 +1,82 @@
 ---
-- name: GNOME desktop keybindings
-  become: false
-  community.general.dconf:
-    key: "/org/gnome/desktop/wm/keybindings/{{ item.key }}"
-    value: "{{ item.value }}"
-  loop:
-    - { key: "switch-applications", value: "['<Alt>Tab']" }
-    - { key: "switch-applications-backward", value: "['<Shift><Alt>Tab']" }
-    - { key: "switch-to-workspace-left", value: "['<Shift><Super>Tab']" }
-    - { key: "switch-to-workspace-right", value: "['<Super>Tab']" }
+- name: Ensure /etc/keyd directory exists
+  file:
+    path: /etc/keyd
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
 
+- name: Deploy keyd default configuration
+  copy:
+    dest: /etc/keyd/default.conf
+    content: |
+      [ids]
+      *
 
-- name: GNOME shell keybindings
+      [control+alt]
+      a = C-A-a
+
+      [alt]
+      x = C-x
+      c = C-c
+      v = C-v
+      a = C-a
+      f = C-f
+      r = C-r
+      z = C-z
+      s = C-s
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Install keyd package
+  community.general.pacman:
+    update_cache: true
+    name: ['keyd']
+    state: present
+
+- name: Ensure keyd services are started and enabled
+  ansible.builtin.systemd:
+    name: keyd
+    enabled: yes
+    state: started
+
+- name: Add current user to keyd group
+  user:
+    name: "{{ ansible_user }}"
+    groups: keyd
+    append: true
+
+- name: Ensure the systemd user directory exists
   become: false
-  community.general.dconf:
-    key: "/org/gnome/shell/keybindings/{{ item.key }}"
-    value: "{{ item.value }}"
-  loop:
-    - { key: "show-screenshot-ui", value: "['<Control><Alt>a']"}
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/.config/systemd/user"
+    state: directory
+    mode: '0755'
+
+- name: Create the keyd-application-mapper systemd user service file
+  become: false
+  ansible.builtin.copy:
+    dest: "/home/{{ ansible_user }}/.config/systemd/user/keyd-application-mapper.service"
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Keyd Application Mapper Daemon
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/keyd-application-mapper
+      Restart=always
+      RestartSec=3
+
+      [Install]
+      WantedBy=default.target
+
+- name: Enable and start the keyd-application-mapper service
+  become: false
+  ansible.builtin.systemd_service:
+    name: "keyd-application-mapper"
+    scope: user
+    enabled: true
+    state: started
