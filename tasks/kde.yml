@@ -50,11 +50,11 @@
         path: "/home/{{ ansible_user }}/.config/kwinrc"
         values: [
           # window theme
-          {
-            groups: [org.kde.kdecoration2],
-            key: theme,
-            value: __aurorae__svg__Graphite-light,
-          },
+          { group: org.kde.kdecoration2, key: library, value: org.kde.kwin.aurorae },
+          { group: org.kde.kdecoration2, key: theme, value: __aurorae__svg__Graphite-light },
+
+          # wayland
+          { group: Wayland, key: "InputMethod[$e]", value: /usr/share/applications/org.fcitx.Fcitx5.desktop },
 
           # task switch
           { group: TabBox, key: ApplicationsMode, value: 1 },
@@ -91,8 +91,21 @@
       community.general.kdeconfig:
         kwriteconfig_path: /usr/bin/kwriteconfig6
         path: "/home/{{ ansible_user }}/.config/kdeglobals"
-        values:
-          - groups: [Icons]
-            key: Theme
-            value: Tela-circle
+        values: [
+          # Icon theme
+          { group: Icons, key: Theme, value: Tela-circle },
+
+          # KDE
+          { group: KDE, key: AnimationDurationFactor, value: 0.5 },
+          { group: KDE, key: LookAndFeelPackage, value: com.github.vinceliuice.Graphite-nord-light },
+          { group: KDE, key: widgetStyle, value: kvantum },
+        ]
         backup: true
+
+    - name: kvantum.kvconfig
+      copy:
+        dest: "/home/{{ ansible_user }}/.config/Kvantum/kvantum.kvconfig"
+        content: |
+          [General]
+          theme=KvMojaveLight#
+        force: no
