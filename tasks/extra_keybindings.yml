@@ -6,7 +6,7 @@
       kewlfft.aur.aur:
         use: yay
         state: present
-        name: ["xremap-x11-bin"]
+        name: ["xremap-kde-bin"]
       become: true
       become_user: aur_builder
 
@@ -16,10 +16,20 @@
         groups: input
         append: yes
 
+    - name: Ensure uinput kernel module is configured to load on boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/uinput.conf
+        content: |
+          uinput
+        owner: root
+        group: root
+        mode: '0644'
+
     - name: Create udev rule to grant access to uinput for logged-in users
       ansible.builtin.copy:
         dest: /etc/udev/rules.d/99-input-for-xremap.rules
-        content: 'KERNEL=="uinput", GROUP="input", TAG+="uaccess"\n'
+        content: |
+          KERNEL=="uinput", GROUP="input", TAG+="uaccess"
         owner: root
         group: root
         mode: '0644'
