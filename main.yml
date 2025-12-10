@@ -49,7 +49,7 @@
 
           # Fonts
           'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'inter-font',
-          'ttf-font-awesome', 'ttf-iosevka-nerd', 'ttf-iosevkaterm-nerd', 'ttf-ubuntu-mono-nerd',
+          'ttf-font-awesome', 'ttf-iosevka-nerd', 'ttf-iosevkaterm-nerd', 'ttf-ubuntu-mono-nerd', 'ttf-victor-mono-nerd',
           'ttf-jetbrains-mono-nerd', 'ttf-jetbrains-mono', 'wqy-zenhei', 'wqy-microhei',
         ]
 
