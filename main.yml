@@ -121,7 +121,6 @@
       when: dotconfig_git.stat.exists
 
     - include_tasks: tasks/fcitx5.yml
-    - include_tasks: tasks/ulauncher.yml
     - include_tasks: tasks/kde.yml
 
     - name: Check if extras.yml exists

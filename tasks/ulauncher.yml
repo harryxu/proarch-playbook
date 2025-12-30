@@ -27,4 +27,3 @@
       Comment=Application launcher
     mode: "0644"
   become: false
-
