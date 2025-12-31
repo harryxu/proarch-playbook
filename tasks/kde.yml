@@ -109,3 +109,28 @@
           [General]
           theme=KvMojaveLight#
         force: no
+
+- name: Ensure krunner Command Shortcut desktop file exists
+  ansible.builtin.copy:
+    dest: "/home/{{ ansible_user }}/.local/share/applications/net.local.krunner.desktop"
+    mode: '0644'
+    content: |
+      [Desktop Entry]
+      Exec=krunner
+      Name=KRunner
+      NoDisplay=true
+      StartupNotify=false
+      Type=Application
+      X-KDE-GlobalAccel-CommandShortcut=true
+
+- name: Setup KDE keyboard shortcuts
+  become: false
+  community.general.kdeconfig:
+    path: "/home/{{ ansible_user }}/.config/kglobalshortcutsrc"
+    values:
+      - groups: [services, org.kde.krunner.desktop]
+        key: RunClipboard
+        value: none
+      - groups: [services, net.local.krunner.desktop]
+        key: _launch
+        value: "Alt+E"
