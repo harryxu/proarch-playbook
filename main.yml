@@ -66,6 +66,7 @@
 
       with_items:
         - ".config"
+        - ".config/systemd/user"
         - ".local/share/applications"
         - ".local/bin"
 
