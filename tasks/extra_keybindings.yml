@@ -13,7 +13,7 @@
         - ".local/share/xremap-features/gnome"
         - ".local/share/xremap-features/cosmic"
 
-    - name: Install xremap kde Rust package
+    - name: Install xremap Rust packages
       become: false
       community.general.cargo:
         name: xremap
@@ -49,6 +49,84 @@
         owner: root
         group: root
         mode: '0644'
+
+    - name: Create the smart launcher script
+      become: false
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user }}/.local/bin/xremap-launcher"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          # Managed by Ansible
+
+          CONFIG_PATH="$1"
+          if [ -z "$CONFIG_PATH" ]; then
+              CONFIG_PATH="$HOME/.config/xremap/config.yml"
+          fi
+
+          DESKTOP_ENV="${XDG_CURRENT_DESKTOP,,}"
+          echo "Launcher detected Desktop Environment: $XDG_CURRENT_DESKTOP"
+
+          if [[ "$DESKTOP_ENV" == *"gnome"* ]]; then
+              BIN_DIR="gnome"
+          elif [[ "$DESKTOP_ENV" == *"kde"* ]] || [[ "$DESKTOP_ENV" == *"plasma"* ]]; then
+              BIN_DIR="kde"
+          elif [[ "$DESKTOP_ENV" == *"cosmic"* ]]; then
+              BIN_DIR="cosmic"
+          else
+              echo "Warning: Unknown environment $XDG_CURRENT_DESKTOP, defaulting to generic xremap if available or failing."
+              # Here you can choose to fallback to a specific version or exit with an error
+              exit 1
+          fi
+
+          EXECUTABLE="$HOME/.local/share/xremap-features/$BIN_DIR/bin/xremap"
+
+          # Check if the binary file exists
+          if [ ! -f "$EXECUTABLE" ]; then
+              echo "Error: Binary $EXECUTABLE not found."
+              exit 1
+          fi
+
+          echo "Starting xremap with config $CONFIG_PATH"
+          exec "$EXECUTABLE" "$CONFIG_PATH" --watch
+
+    - name: Create the xremap systemd user service
+      become: false
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user }}/.config/systemd/user/xremap.service"
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Xremap input remapper (Multi-DE support)
+          Documentation=https://github.com/xremap/xremap
+
+          # Wait for graphical session to be ready
+          After=graphical-session.target
+          Wants=graphical-session.target
+
+          [Service]
+          Type=simple
+          KillMode=process
+          # Pass environment variables to script to identify desktop environment
+          PassEnvironment=DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP
+
+          # Point to our smart script and pass the config file path as an argument
+          ExecStart=/home/{{ ansible_user }}/.local/bin/xremap-launcher /home/{{ ansible_user }}/.config/xremap/config.yml
+
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=graphical-session.target
+
+    - name: Enable and start xremap service
+      become: false
+      ansible.builtin.systemd:
+        name: xremap
+        scope: user
+        enabled: true
+        state: started
+        daemon_reload: true
 
     # - name: Create the xremap systemd user service file
     #   become: false
