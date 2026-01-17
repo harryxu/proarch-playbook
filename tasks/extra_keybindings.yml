@@ -2,13 +2,29 @@
 - name: Configure xremap keybindings
 
   block:
-    - name: Install xremap
-      kewlfft.aur.aur:
-        use: yay
-        state: present
-        name: ["xremap-kde-bin"]
-      become: true
-      become_user: aur_builder
+    - name: Create local directories
+      become: false
+      file:
+        path: "/home/{{ ansible_user }}/{{ item }}"
+        recurse: yes
+        state: directory
+      with_items:
+        - ".local/share/xremap-features/kde"
+        - ".local/share/xremap-features/gnome"
+        - ".local/share/xremap-features/cosmic"
+
+    - name: Install xremap kde Rust package
+      become: false
+      community.general.cargo:
+        name: xremap
+        path: "/home/{{ ansible_user }}/.local/share/xremap-features/{{ item }}"
+        features:
+          - "{{ item }}"
+      loop:
+        - gnome
+        - kde
+        - cosmic
+
 
     - name: Add the target user to the 'input' group
       ansible.builtin.user:
@@ -34,31 +50,31 @@
         group: root
         mode: '0644'
 
-    - name: Create the xremap systemd user service file
-      become: false
-      ansible.builtin.copy:
-        dest: "/home/{{ ansible_user }}/.config/systemd/user/xremap.service"
-        mode: '0644'
-        content: |
-          [Unit]
-          Description=Xremap input remapper
-          Documentation=https://github.com/xremap/xremap
+    # - name: Create the xremap systemd user service file
+    #   become: false
+    #   ansible.builtin.copy:
+    #     dest: "/home/{{ ansible_user }}/.config/systemd/user/xremap.service"
+    #     mode: '0644'
+    #     content: |
+    #       [Unit]
+    #       Description=Xremap input remapper
+    #       Documentation=https://github.com/xremap/xremap
 
-          [Service]
-          # KillMode=process is important to ensure xremap and its child processes are terminated correctly.
-          KillMode=process
-          # Use the full path to the executable found by Ansible
-          ExecStart=/usr/bin/xremap /home/{{ ansible_user }}/.config/xremap/config.yml
-          Restart=always
-          RestartSec=3
+    #       [Service]
+    #       # KillMode=process is important to ensure xremap and its child processes are terminated correctly.
+    #       KillMode=process
+    #       # Use the full path to the executable found by Ansible
+    #       ExecStart=/usr/bin/xremap /home/{{ ansible_user }}/.config/xremap/config.yml
+    #       Restart=always
+    #       RestartSec=3
 
-          [Install]
-          WantedBy=default.target
+    #       [Install]
+    #       WantedBy=default.target
 
-    - name: Enable and start the xremap service
-      become: false
-      ansible.builtin.systemd_service:
-        name: "xremap"
-        scope: user
-        enabled: true
-        state: started
+    # - name: Enable and start the xremap service
+    #   become: false
+    #   ansible.builtin.systemd_service:
+    #     name: "xremap"
+    #     scope: user
+    #     enabled: true
+    #     state: started

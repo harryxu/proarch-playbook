@@ -42,7 +42,7 @@
           'gtk-layer-shell',
 
           # dev envs
-          'go', 'nodejs', 'npm',
+          'go', 'nodejs', 'npm', 'rust',
 
           # apps
           'zed', 'ghostty', 'vlc', 'flameshot',
