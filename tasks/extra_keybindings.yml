@@ -127,32 +127,3 @@
         enabled: true
         state: started
         daemon_reload: true
-
-    # - name: Create the xremap systemd user service file
-    #   become: false
-    #   ansible.builtin.copy:
-    #     dest: "/home/{{ ansible_user }}/.config/systemd/user/xremap.service"
-    #     mode: '0644'
-    #     content: |
-    #       [Unit]
-    #       Description=Xremap input remapper
-    #       Documentation=https://github.com/xremap/xremap
-
-    #       [Service]
-    #       # KillMode=process is important to ensure xremap and its child processes are terminated correctly.
-    #       KillMode=process
-    #       # Use the full path to the executable found by Ansible
-    #       ExecStart=/usr/bin/xremap /home/{{ ansible_user }}/.config/xremap/config.yml
-    #       Restart=always
-    #       RestartSec=3
-
-    #       [Install]
-    #       WantedBy=default.target
-
-    # - name: Enable and start the xremap service
-    #   become: false
-    #   ansible.builtin.systemd_service:
-    #     name: "xremap"
-    #     scope: user
-    #     enabled: true
-    #     state: started
