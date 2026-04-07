@@ -36,7 +36,7 @@
         update_cache: true
         name: [
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
-          'fish', 'vim', 'neovim', 'tmux', 'lazygit',
+          'fish', 'vim', 'neovim', 'tmux', 'zellij', 'lazygit',
           'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
 
           'gtk-layer-shell',
@@ -105,9 +105,7 @@
       kewlfft.aur.aur:
         use: yay
         state: present
-        name: [
-          'google-chrome', 'visual-studio-code-bin', 'crow-translate',
-        ]
+        name: ["google-chrome", "visual-studio-code-bin", "crow-translate"]
       become: true
       become_user: aur_builder
 
@@ -117,7 +115,7 @@
         content: |
           # Set the default browser for applications launched from this shell
           set -gx BROWSER 'google-chrome-stable'
-        mode: '0664'
+        mode: "0664"
         force: false
       when: dotconfig_git.stat.exists
 
