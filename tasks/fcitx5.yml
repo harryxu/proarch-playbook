@@ -11,14 +11,18 @@
         "fcitx5-chinese-addons",
         "fcitx5-pinyin-zhwiki",
         "fcitx5-material-color",
+        "fcitx5-rime",
       ]
     state: present
 
-- name: Install KDE kimpanel protocol for gnome shell.
+- name: Install aur packages.
   kewlfft.aur.aur:
     use: yay
     state: present
-    name: ["gnome-shell-extension-kimpanel-git"]
+    name: [
+      "rime-ice-git",
+      # "gnome-shell-extension-kimpanel-git"
+    ]
   become: true
   become_user: aur_builder
 
