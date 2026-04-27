@@ -1,0 +1,35 @@
+---
+- name: Create cliphist systemd user service
+  ansible.builtin.copy:
+    dest: "/home/{{ ansible_user }}/.config/systemd/user/cliphist.service"
+    content: |
+      [Unit]
+      Description=Cliphist Watch Service
+      After=graphical-session-pre.target
+      PartOf=graphical-session.target
+
+      [Service]
+      Type=simple
+      ExecStart=/usr/bin/wl-paste --watch /usr/bin/cliphist store
+      Restart=on-failure
+      RestartSec=5
+
+      [Install]
+      WantedBy=graphical-session.target
+    mode: "0644"
+    force: true
+  become: false
+
+- name: Reload user systemd daemon
+  ansible.builtin.systemd:
+    daemon_reload: yes
+    scope: user
+  become: false
+
+- name: Enable and start cliphist user service
+  ansible.builtin.systemd:
+    name: cliphist.service
+    enabled: yes
+    state: started
+    scope: user
+  become: false

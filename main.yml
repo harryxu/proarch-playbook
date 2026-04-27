@@ -117,6 +117,7 @@
         force: false
       when: dotconfig_git.stat.exists
 
+    - include_tasks: tasks/cliphist.yml
     - include_tasks: tasks/fcitx5.yml
     - include_tasks: tasks/kde.yml
 
