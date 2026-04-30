@@ -56,3 +56,15 @@
       Name=Fcitx 5
       Comment=Start Fcitx 5 input method
   become: false
+
+- name: Ensure Fcitx5 Rime default configuration exists
+  ansible.builtin.copy:
+    dest: "/home/{{ ansible_user }}/.local/share/fcitx5/rime/default.custom.yaml"
+    mode: "0644"
+    content: |
+      patch:
+        # 这里的 rime_ice_suggestion 为雾凇方案的默认预设
+        __include: rime_ice_suggestion:/
+        menu:
+          page_size: 9
+  become: false
