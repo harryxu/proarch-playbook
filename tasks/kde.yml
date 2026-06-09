@@ -44,6 +44,26 @@
       shell: |
         plasma-apply-desktoptheme Graphite-nord-light
 
+    - name: Ensure tabbox directory exists.
+      become: false
+      file:
+        path: "/home/{{ ansible_user }}/.local/share/kwin/tabbox"
+        recurse: yes
+        state: directory
+
+    - name: AquaMediumIcons tabbox style
+      stat:
+        path: "/home/{{ ansible_user }}/.local/share/kwin/tabbox/AquaMediumIcons"
+      register: aquaicon_style
+
+    - name: Clone AquaMediumIcons tabbox style
+      git:
+        repo: "https://github.com/harryxu/kde-aquamediumicons.git"
+        dest: "/home/{{ ansible_user }}/.local/share/kwin/tabbox/AquaMediumIcons"
+        clone: true
+        update: true
+      when: not aquaicon_style.stat.exists
+
     - name: kwinrc
       community.general.kdeconfig:
         kwriteconfig_path: /usr/bin/kwriteconfig6
@@ -59,7 +79,7 @@
           # task switch
           { group: TabBox, key: ApplicationsMode, value: 1 },
           { group: TabBox, key: HighlightWindows, bool_value: false },
-          { group: TabBox, key: LayoutName, value: big_icons },
+          { group: TabBox, key: LayoutName, value: AquaMediumIcons },
 
           # Virtual Desktop
           { group: Desktops, key: Number, value: 5 },
