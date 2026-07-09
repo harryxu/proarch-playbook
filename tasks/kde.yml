@@ -12,7 +12,7 @@
   kewlfft.aur.aur:
     use: yay
     state: present
-    name: ["konsave"]
+    name: ["konsave", "sddm-silent-theme"]
   become: true
   become_user: aur_builder
 
@@ -113,7 +113,7 @@
         path: "/home/{{ ansible_user }}/.config/kdeglobals"
         values: [
           # Icon theme
-          { group: Icons, key: Theme, value: Tela-circle },
+          # { group: Icons, key: Theme, value: Tela-circle },
 
           # KDE
           { group: KDE, key: AnimationDurationFactor, value: 0.5 },
