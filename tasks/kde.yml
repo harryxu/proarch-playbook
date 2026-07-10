@@ -4,7 +4,7 @@
   community.general.pacman:
     update_cache: true
     name: [
-      "kdiff3", "kommit", "kvantum"
+      "kdiff3", "kommit", "kvantum", "sddm"
     ]
     state: present
 
@@ -166,3 +166,13 @@
       - groups: [services, net.local.krunner.desktop]
         key: _launch
         value: "Alt+E"
+
+- name: Configure SDDM theme
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: Theme
+    option: Current
+    value: silent
+    no_extra_spaces: true
+    backup: true
+  become: true
