@@ -82,7 +82,7 @@
           { group: TabBox, key: LayoutName, value: AquaMediumIcons },
 
           # Virtual Desktop
-          { group: Desktops, key: Number, value: 5 },
+          { group: Desktops, key: Number, value: 3 },
         ]
         backup: true
 
@@ -127,8 +127,20 @@
         dest: "/home/{{ ansible_user }}/.config/Kvantum/kvantum.kvconfig"
         content: |
           [General]
-          theme=KvMojaveLight#
+          theme=Graphite
         force: no
+
+- name: Setup Screen Locking
+  shell: |
+    kwriteconfig6 --file kscreenlockerrc \
+      --group Greeter --key WallpaperPlugin org.kde.potd
+    kwriteconfig6 --file kscreenlockerrc \
+      --group Greeter --group Wallpaper --group org.kde.potd --group General \
+      --key Provider bing
+    kwriteconfig6 --file kscreenlockerrc \
+      --group Greeter --group Wallpaper --group org.kde.potd --group General \
+      --key UpdateOverMeteredConnection 1
+  become: false
 
 - name: Ensure krunner Command Shortcut desktop file exists
   ansible.builtin.copy:
