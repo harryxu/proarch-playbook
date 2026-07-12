@@ -177,6 +177,30 @@
     backup: true
   become: true
 
+- name: Copy SDDM silent theme background image
+  ansible.builtin.copy:
+    src: files/sddm/themes/silent/backgrounds/ristretto.jpg
+    dest: /usr/share/sddm/themes/silent/backgrounds/random.jpg
+    force: false
+  become: true
+
+- name: Copy SDDM silent theme altumfish config
+  ansible.builtin.copy:
+    src: files/sddm/themes/silent/configs/altumfish.conf
+    dest: /usr/share/sddm/themes/silent/configs/altumfish.conf
+    force: false
+  become: true
+
+- name: Update SDDM silent theme ConfigFile to altumfish.conf
+  community.general.ini_file:
+    path: /usr/share/sddm/themes/silent/metadata.desktop
+    section: SddmGreeterTheme
+    option: ConfigFile
+    value: configs/altumfish.conf
+    no_extra_spaces: true
+    backup: true
+  become: true
+
 - name: Check current display manager symlink
   ansible.builtin.stat:
     path: /etc/systemd/system/display-manager.service
