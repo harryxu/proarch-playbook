@@ -1,10 +1,12 @@
 ---
 
+# Note: It is recommended to use 'kdewallet' as the default wallet name.
+
 - name: Install KDE packages.
   community.general.pacman:
     update_cache: true
     name: [
-      "kdiff3", "kommit", "kvantum", "sddm"
+      "kdiff3", "kommit", "kvantum", "sddm", "kwallet-pam"
     ]
     state: present
 
