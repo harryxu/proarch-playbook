@@ -184,6 +184,65 @@
     force: false
   become: true
 
+- name: Check if random-backgrounds directory exists
+  ansible.builtin.stat:
+    path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+  register: random_backgrounds_dir
+  become: true
+
+- name: Download and extract random-backgrounds
+  when: not random_backgrounds_dir.stat.exists
+  become: true
+  block:
+    - name: Download random-backgrounds.zip
+      ansible.builtin.get_url:
+        url: https://github.com/harryxu/proarch-playbook/releases/download/0.1/random-backgrounds.zip
+        dest: /tmp/random-backgrounds.zip
+        mode: '0644'
+
+    - name: Ensure random-backgrounds directory exists
+      ansible.builtin.file:
+        path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+        state: directory
+        mode: '0755'
+
+
+    - name: Extract random-backgrounds.zip
+      ansible.builtin.shell:
+        cmd: unzip -jo /tmp/random-backgrounds.zip -d /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+
+
+- name: Copy randombg.sh to SDDM silent theme directory
+  ansible.builtin.copy:
+    src: files/sddm/themes/silent/randombg.sh
+    dest: /usr/share/sddm/themes/silent/randombg.sh
+    mode: '0755'
+    force: true
+  become: true
+
+- name: Ensure systemd sddm.service drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/sddm.service.d
+    state: directory
+    mode: '0755'
+  become: true
+
+- name: Install systemd drop-in to run randombg.sh before SDDM
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sddm.service.d/randombg.conf
+    mode: '0644'
+    content: |
+      [Service]
+      ExecStartPre=/usr/share/sddm/themes/silent/randombg.sh
+  become: true
+  register: sddm_dropin
+
+- name: Reload systemd daemon after drop-in change
+  ansible.builtin.systemd:
+    daemon_reload: true
+  become: true
+  when: sddm_dropin.changed
+
 - name: Copy SDDM silent theme altumfish config
   ansible.builtin.copy:
     src: files/sddm/themes/silent/configs/altumfish.conf
