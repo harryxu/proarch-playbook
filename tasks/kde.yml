@@ -176,3 +176,38 @@
     no_extra_spaces: true
     backup: true
   become: true
+
+- name: Check current display manager symlink
+  ansible.builtin.stat:
+    path: /etc/systemd/system/display-manager.service
+  register: display_manager_link
+  become: true
+
+- name: Resolve current display manager target
+  ansible.builtin.command:
+    cmd: readlink -f /etc/systemd/system/display-manager.service
+  register: current_dm_target
+  changed_when: false
+  when:
+    - display_manager_link.stat.exists
+    - display_manager_link.stat.islnk
+  become: true
+
+- name: Disable current display manager if not SDDM
+  ansible.builtin.systemd:
+    name: "{{ current_dm_target.stdout | basename | regex_replace('\\.service$', '') }}"
+    enabled: false
+    state: stopped
+  when:
+    - display_manager_link.stat.exists
+    - display_manager_link.stat.islnk
+    - current_dm_target.stdout is defined
+    - "'sddm' not in current_dm_target.stdout"
+  become: true
+
+- name: Enable SDDM as the display manager
+  ansible.builtin.systemd:
+    name: sddm
+    enabled: true
+    state: started
+  become: true
