@@ -1,7 +1,6 @@
 ---
 roles:
   - name: yatesr.timezone
-  - name: geerlingguy.docker
   - name: rolehippie.starship
 
 collections:

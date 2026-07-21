@@ -7,7 +7,6 @@
     - default.config.yml
 
   roles:
-    - geerlingguy.docker
     - rolehippie.starship
 
   pre_tasks:
@@ -38,6 +37,9 @@
           'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
           'fish', 'vim', 'neovim', 'tmux', 'zellij', 'lazygit', 'cliphist', 'rofi',
           'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
+
+          # docker
+          'docker', 'docker-buildx', 'docker-compose',
 
           # dev envs
           'go', 'nodejs', 'npm', 'rust',
@@ -119,6 +121,18 @@
 
     - include_tasks: tasks/cliphist.yml
     - include_tasks: tasks/fcitx5.yml
+
+    - name: Enable and start docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: yes
+        state: started
+
+    - name: Add current user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
 
     - name: Check if extras.yml exists
       stat:
