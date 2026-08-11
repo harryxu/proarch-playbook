@@ -105,7 +105,7 @@
       kewlfft.aur.aur:
         use: yay
         state: present
-        name: ["google-chrome", "visual-studio-code-bin", "crow-translate", "herdr-bin"]
+        name: ["google-chrome", "crow-translate", "herdr-bin"]
       become: true
       become_user: aur_builder
 
