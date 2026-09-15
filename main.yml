@@ -121,6 +121,7 @@
 
     - include_tasks: tasks/cliphist.yml
     - include_tasks: tasks/fcitx5.yml
+    - include_tasks: tasks/vicinae.yml
 
     - name: Enable and start docker service
       ansible.builtin.systemd:
