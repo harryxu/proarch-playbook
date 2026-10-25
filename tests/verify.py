@@ -316,39 +316,43 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
                    env=app_environment, check=True)
     assert native_marker.read_text() == 'literal argument\n'
     browser_flag.touch()
-    # A playbook-triggered theme restore must use the same guards before login.
+    # Deploying Shell preferences must never query or switch the system theme.
     # Exercise the real Shell tasks with a fake Omarchy CLI, never the live desktop.
     (app_home / '.config/fontconfig/conf.d').mkdir(parents=True)
     fake_cli = fake_native / 'bin/omarchy'
+    theme_command_marker = work / 'unexpected-theme-command'
     fake_cli.write_text('''#!/bin/bash
-case "$1 $2" in
-  'theme current') echo old-theme ;;
-  'theme set') omarchy-theme-set-browser "$3" ;;
-esac
+if [[ $1 == theme ]]; then
+  printf '%s\\n' "$*" >> "$THEME_COMMAND_MARKER"
+  exit 99
+fi
+exit 0
 ''')
     fake_cli.chmod(0o755)
     fake_toggle = fake_native / 'bin/omarchy-toggle-enabled'
     fake_toggle.write_text('#!/bin/bash\nexit 1\n')
     fake_toggle.chmod(0o755)
-    restore_play = work / 'restore-theme.yml'
-    restore_play.write_text(json.dumps([{
-        'name': 'Verify the actual theme restoration uses guards',
+    shell_play = work / 'shell-preferences.yml'
+    shell_play.write_text(json.dumps([{
+        'name': 'Verify Shell configuration preserves the system theme',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars_files': [str(ROOT / 'default.config.yml')],
         'vars': {'target_home': str(app_home),
                  'ansible_facts': {'env': {'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']}}},
         'environment': {'HOME': str(app_home), 'OMARCHY_PATH': str(fake_native),
                         'THEME_TEST_MARKER': str(native_marker),
+                        'THEME_COMMAND_MARKER': str(theme_command_marker),
                         'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']},
         'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/configuration.yml')},
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/shell.yml')}],
         'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
                      for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
     }]))
-    command(['ansible-playbook', str(restore_play), '-i', 'localhost,', '-c', 'local',
+    command(['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
                               'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})])
-    assert native_marker.read_text() == 'literal argument\n', 'Playbook theme restore bypassed guards'
+    assert not theme_command_marker.exists(), 'Shell deployment queried or switched the system theme'
+    assert native_marker.read_text() == 'literal argument\n', 'Shell deployment retinted applications'
     # Resolve through login Bash and fish without executing any native retint.
     resolved = subprocess.run(['bash', '-lc', 'command -v omarchy-theme-set-browser'],
                               env=app_environment, text=True, capture_output=True, check=True)

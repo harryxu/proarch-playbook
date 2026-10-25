@@ -138,7 +138,8 @@ The maintained configuration includes:
 
 - Personal bindings, zero window gaps, resize borders, and DropSpace autostart.
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
-- Nord theme selection, Shell font size 12, and a monospace fontconfig preference.
+- Shell font size 12 and a monospace fontconfig preference. The system theme is
+  selected manually in Omarchy and is never changed by this playbook.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
 - User-owned plugins following latest upstream code, with the obsolete `dropspace` activation entry removed.
 
@@ -198,7 +199,6 @@ omarchy_overrides:
 Omarchy 4.5 supplies the VS Code opt-out but no Chromium opt-out. User-owned
 guards intercept the browser retint command using a dedicated PATH directory;
 login Bash, UWSM, fish, and personal Hyprland autostart load that directory.
-The playbook's own theme restore also uses this guard before the next login.
 The Omarchy theme picker launches login Bash, so it reads the guard immediately
 after deployment. Existing terminals need a new shell, and direct session
 launches receive the environment after login or the managed Hyprland reload.

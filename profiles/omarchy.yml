@@ -6,7 +6,6 @@ aur_packages: []
 dotconfig_paths: []
 omarchy:
   version_pattern: ^4\.5\.
-  theme: nord
   font_family: JetBrainsMono Nerd Font
   shell_font_size: 12
   screensaver_enabled: false

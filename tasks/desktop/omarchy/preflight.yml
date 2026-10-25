@@ -30,7 +30,6 @@
   ansible.builtin.assert:
     that:
       - omarchy_settings.shell is mapping
-      - omarchy_settings.theme is match('^[a-z0-9][a-z0-9-]*$')
       - omarchy_settings.font_family is string
       - omarchy_settings.hooks | default([]) is sequence
       - omarchy_settings.hooks | default([]) is not string

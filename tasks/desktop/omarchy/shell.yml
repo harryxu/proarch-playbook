@@ -36,24 +36,6 @@
     mode: '0644'
     backup: true
 
-- name: Read the selected Omarchy theme
-  ansible.builtin.command: omarchy theme current
-  register: current_omarchy_theme
-  changed_when: false
-  check_mode: false
-
-- name: Restore theme selection without retinting shared applications
-  ansible.builtin.command:
-    argv: [omarchy, theme, set, "{{ omarchy_settings.theme }}"]
-  environment:
-    OMARCHY_THEME_HEADLESS: '1'
-    PATH: >-
-      {{ (target_home ~ '/.local/share/proarch/app-theme-guards/bin:' if omarchy_settings.independent_app_themes else '')
-         ~ (ansible_facts.env.PATH | default('/usr/local/bin:/usr/bin')) }}
-  when: current_omarchy_theme.stdout | lower | replace(' ', '-') != omarchy_settings.theme
-  changed_when: true
-  notify: Reload Hyprland
-
 - name: Query the explicit screensaver preference
   ansible.builtin.command: omarchy-toggle-enabled screensaver-off
   register: screensaver_disabled
