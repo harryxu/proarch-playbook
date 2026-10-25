@@ -3,7 +3,6 @@
 features:
   cliphist: true
   vicinae: true
-  rime_ice: true
 packages:
   - rofi
   - cliphist

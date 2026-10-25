@@ -85,7 +85,7 @@ omarchy_overrides:
 | --- | --- | --- |
 | Docker, SSH, shared dotconfig | Enabled | Enabled |
 | Fcitx5 / Rime components | Enabled | Enabled |
-| Rime Ice personal preference | Enabled, preserving the old playbook | Disabled, preserving the current Omarchy input scheme |
+| Rime Ice personal preference | Enabled | Enabled |
 | Standalone cliphist and Vicinae services | Enabled, preserving the old playbook | Disabled; Omarchy supplies these integrations |
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
 | Snapper + GRUB integration | Opt-in | Opt-in only on a compatible Btrfs/GRUB host |

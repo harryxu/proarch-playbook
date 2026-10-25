@@ -8,11 +8,11 @@ feature_overrides:
   sshd: true
   dotconfig: true
   input_method: true
+  rime_ice: true # Both profiles; requires input_method.
   bluetooth: false
   snapper: false
   keybindings: false # xremap; KDE only
   # Uncomment to override the selected profile's defaults:
-  # rime_ice: false   # KDE: true; Omarchy: false; requires input_method.
   # cliphist: false   # KDE: true; Omarchy: must remain false.
   # vicinae: false    # KDE: true; Omarchy: must remain false.
 

@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         run(dict(desktop_profile=profile))
         data = json.loads((work / 'result.json').read_text())
         assert data['profile'] == profile
-        assert data['features']['rime_ice'] == (profile == 'kde')
+        assert data['features']['rime_ice'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
 
@@ -100,7 +100,7 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         data = json.loads((work / 'result.json').read_text())
         assert data['profile'] == profile
         assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
-        assert data['features']['rime_ice'] == (profile == 'kde')
+        assert data['features']['rime_ice'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
 

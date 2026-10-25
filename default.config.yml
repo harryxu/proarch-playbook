@@ -10,7 +10,7 @@ feature_defaults:
   sshd: true
   dotconfig: true
   input_method: true
-  rime_ice: false
+  rime_ice: true
   cliphist: false
   vicinae: false
   bluetooth: false
