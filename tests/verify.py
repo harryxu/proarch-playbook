@@ -115,7 +115,9 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     assert data['profile'] == 'omarchy' and data['features']['docker'] is False
     assert data['omarchy']['shell']['idle']['lock'] == 42
     assert data['omarchy']['shell']['bar']['layout']['right'] == []
-    assert data['omarchy']['shell']['bar']['layout']['left'], 'Nested defaults were lost'
+    assert data['omarchy']['shell']['bar']['background'] == 'glassy', 'Nested defaults were lost'
+    assert set(data['omarchy']['shell']['bar']) == {'background', 'layout'}
+    assert data['omarchy']['shell']['dock'] == {'autohide': True}
     for overrides in [{'docker': 'false'}, {'unknown_feature': True},
                       {'cliphist': True}, {'keybindings': True}]:
         run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
@@ -332,13 +334,20 @@ exit 0
     fake_toggle = fake_native / 'bin/omarchy-toggle-enabled'
     fake_toggle.write_text('#!/bin/bash\nexit 1\n')
     fake_toggle.chmod(0o755)
+    # A missing user file starts with the installed defaults, including new fields.
+    shell_defaults = {'version': 1, 'bar': {'background': 'opaque', 'position': 'bottom',
+                      'layout': {'left': [{'id': 'omarchy.menu'}]}},
+                      'dock': {'autohide': False, 'pinned': ['system-app'], 'size': 48}}
+    (fake_native / 'config/omarchy').mkdir(parents=True)
+    (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
     shell_play = work / 'shell-preferences.yml'
     shell_play.write_text(json.dumps([{
         'name': 'Verify Shell configuration preserves the system theme',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars_files': [str(ROOT / 'default.config.yml')],
         'vars': {'target_home': str(app_home),
-                 'ansible_facts': {'env': {'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']}}},
+                 'ansible_facts': {'env': {'PATH': str(fake_native / 'bin') + ':' + ENV['PATH'],
+                                          'OMARCHY_PATH': str(fake_native)}}},
         'environment': {'HOME': str(app_home), 'OMARCHY_PATH': str(fake_native),
                         'THEME_TEST_MARKER': str(native_marker),
                         'THEME_COMMAND_MARKER': str(theme_command_marker),
@@ -348,9 +357,27 @@ exit 0
         'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
                      for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
     }]))
-    command(['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
+    shell_cmd = ['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
-                              'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})])
+                              'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})]
+    command(shell_cmd)
+    shell_json = app_home / '.config/omarchy/shell.json'
+    shell_data = json.loads(shell_json.read_text())
+    assert shell_data['bar'] == shell_defaults['bar'] | {'background': 'glassy'}
+    assert shell_data['dock'] == shell_defaults['dock'] | {'autohide': True}
+    # User edits to every unmanaged bar/dock field survive subsequent deployments.
+    shell_data['bar'] = {'background': 'opaque', 'position': 'left',
+                         'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}]},
+                         'user-option': {'enabled': True}}
+    shell_data['dock'] = {'autohide': False, 'pinned': ['user-app'], 'size': 64}
+    shell_json.write_text(json.dumps(shell_data))
+    command(shell_cmd)
+    expected_shell = shell_data | {'bar': shell_data['bar'] | {'background': 'glassy'},
+                                  'dock': shell_data['dock'] | {'autohide': True}}
+    assert json.loads(shell_json.read_text()) == expected_shell
+    deployed_shell = shell_json.read_bytes()
+    command(shell_cmd)
+    assert shell_json.read_bytes() == deployed_shell, 'Shell preferences changed on a stable rerun'
     assert not theme_command_marker.exists(), 'Shell deployment queried or switched the system theme'
     assert native_marker.read_text() == 'literal argument\n', 'Shell deployment retinted applications'
     # Resolve through login Bash and fish without executing any native retint.

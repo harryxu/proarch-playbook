@@ -33,6 +33,8 @@ omarchy_monitors:
 omarchy_overrides:
   independent_app_themes: true
   shell:
+    # Only bar.background and dock.autohide are managed by default.
+    # Other bar/dock settings remain user-owned unless explicitly added here.
     idle:
       lock: 600
 

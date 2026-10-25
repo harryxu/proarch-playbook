@@ -13,6 +13,7 @@ omarchy:
   screensaver_enabled: false
   independent_app_themes: true
   shell:
+    # Manage only these bar/dock fields; preserve all other personal preferences.
     bar:
       background: glassy
     dock:

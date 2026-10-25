@@ -10,10 +10,24 @@
   loop_control:
     label: "{{ item.id }}"
 
-- name: Deploy the personal Shell configuration
+- name: Check for existing personal Shell preferences
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.config/omarchy/shell.json"
+  register: omarchy_shell_file
+
+- name: Read personal Shell preferences or installed system defaults
+  ansible.builtin.slurp:
+    src: >-
+      {{ target_home + '/.config/omarchy/shell.json' if omarchy_shell_file.stat.exists
+         else (ansible_facts.env.OMARCHY_PATH | default('/usr/share/omarchy')) + '/config/omarchy/shell.json' }}
+  register: omarchy_shell_source
+
+- name: Merge managed Shell preferences while preserving personal settings
   ansible.builtin.copy:
     dest: "{{ target_home }}/.config/omarchy/shell.json"
-    content: "{{ omarchy_settings.shell | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
+    content: "{{ (omarchy_shell_source.content | b64decode | from_json)
+                | combine(omarchy_settings.shell, recursive=true)
+                | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
 "
     mode: '0600'
     backup: true
