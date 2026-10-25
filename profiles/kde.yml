@@ -4,6 +4,7 @@ features:
   cliphist: true
   vicinae: true
 packages:
+  - ttf-jetbrains-mono-nerd
   - rofi
   - cliphist
   - wl-clipboard

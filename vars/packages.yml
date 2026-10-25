@@ -40,7 +40,6 @@ common_packages:
   - ttf-iosevkaterm-nerd
   - ttf-ubuntu-mono-nerd
   - ttf-victor-mono-nerd
-  - ttf-jetbrains-mono-nerd
   - ttf-jetbrains-mono
   - wqy-zenhei
   - wqy-microhei

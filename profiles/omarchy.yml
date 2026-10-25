@@ -1,7 +1,8 @@
 ---
 # Desktop defaults; host configuration can override these explicitly.
 features: {}
-packages: []
+packages:
+  - ttf-jetbrains-mono-nerd-basic
 aur_packages: []
 dotconfig_paths: []
 omarchy:
