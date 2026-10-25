@@ -41,14 +41,6 @@
       ansible.builtin.import_tasks: tasks/features/main.yml
       tags: [features]
 
-    - name: Run local extras when supplied
-      ansible.builtin.include_tasks:
-        file: "{{ item }}"
-        apply:
-          tags: [extras]
-      loop: "{{ query('ansible.builtin.fileglob', playbook_dir ~ '/extras.yml') }}"
-      tags: [extras]
-
   handlers:
     - name: Load configuration handlers
       ansible.builtin.import_tasks: handlers/main.yml

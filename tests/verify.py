@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     - ansible.builtin.import_tasks: """ + str(ROOT / 'tasks/configuration.yml') + """
     - ansible.builtin.copy:
         dest: "{{ result_file }}"
-        content: "{{ {'profile': desktop_profile, 'features': features, 'omarchy': omarchy_settings} | to_json }}"
+        content: "{{ {'profile': desktop_profile, 'features': features, 'omarchy': omarchy_settings, 'extra_packages': extra_packages, 'extra_aur_packages': extra_aur_packages} | to_json }}"
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/dotconfig.yml') + """
       when: verify_dotconfig | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/user_service.yml') + """
@@ -85,6 +85,21 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         run(dict(desktop_profile=profile))
         data = json.loads((work / 'result.json').read_text())
         assert data['profile'] == profile
+        assert data['features']['rime_ice'] == (profile == 'kde')
+        assert data['features']['cliphist'] == (profile == 'kde')
+        assert data['features']['vicinae'] == (profile == 'kde')
+
+    # A copied example is the only host configuration needed for either profile.
+    example_host = work / 'example-config.yml'
+    example = (ROOT / 'config.yml.example').read_text()
+    for profile in ['kde', 'omarchy']:
+        example_host.write_text(example.replace('desktop_profile: omarchy', 'desktop_profile: ' + profile)
+                               .replace('extra_packages: []', 'extra_packages: [jq]')
+                               .replace('extra_aur_packages: []', 'extra_aur_packages: [fixture-aur]'))
+        run(dict(playbook_config_file=str(example_host)))
+        data = json.loads((work / 'result.json').read_text())
+        assert data['profile'] == profile
+        assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
         assert data['features']['rime_ice'] == (profile == 'kde')
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')

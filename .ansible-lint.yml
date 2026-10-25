@@ -5,6 +5,5 @@ skip_list:
 
 # Treat the example files as their actual Ansible content types.
 kinds:
-  - tasks: "**/extras.yml.example"
   - vars: "**/config.yml.example"
   - inventory: "**/inventory/*.yml.example"

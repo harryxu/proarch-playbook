@@ -16,7 +16,9 @@ ansible-galaxy collection install -r requirements.yml
 cp config.yml.example config.yml
 ```
 
-Edit `config.yml` and choose the target desktop:
+Edit `config.yml` to choose the target desktop, optional features, additional
+packages, and machine-specific settings. This is the only host configuration
+file needed after cloning:
 
 ```yaml
 desktop_profile: omarchy  # or kde; required
@@ -98,7 +100,7 @@ input integration is configured.
 
 xremap is installed only with `desktop_profile: kde` and
 `feature_overrides.keybindings: true`. Its task entry point also requires KDE,
-including when referenced directly from extras. Its configuration is deployed
+including when its task file is imported directly. Its configuration is deployed
 only by the KDE profile. The launcher and systemd `ExecCondition` check the
 current session's `XDG_CURRENT_DESKTOP` for a KDE/Plasma token, so an enabled
 service skips startup in Hyprland, GNOME, other desktops, and headless sessions.
@@ -242,8 +244,9 @@ handlers/                change-triggered session updates
 
 Use `--tags common`, `--tags dotconfig`, `--tags desktop`, or `--tags features`
 after initial provisioning. Read-only selection and prerequisite checks always
-run. `extras.yml` remains an optional local extension, but desktop selection
-belongs in `config.yml`, not extras. `tasks/kde.yml` and `tasks/fcitx5.yml` remain
+run. All host customization belongs in `config.yml`: select built-in integrations
+with `feature_overrides` and add software with `extra_packages` or
+`extra_aur_packages`. `tasks/kde.yml` and `tasks/fcitx5.yml` remain
 compatibility entry points; configuration is now resolved by `main.yml` first.
 
 With Ansible, Git, Python, the required collections, and Lua's `luac` installed:

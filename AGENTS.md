@@ -6,7 +6,7 @@ development environment with an explicit KDE or Omarchy desktop profile.
 ## Structure
 
 - `main.yml` resolves configuration, checks prerequisites, then runs shared,
-  selected desktop, optional feature, and local extras tasks.
+  selected desktop, and optional feature tasks.
 - `default.config.yml` and `profiles/` hold shared and desktop defaults.
   `config.yml.example` documents host customization; `config.yml` is ignored.
 - `vars/packages.yml` holds shared package choices.
@@ -26,7 +26,8 @@ development environment with an explicit KDE or Omarchy desktop profile.
 - Keep Omarchy packaged defaults and generated state under Omarchy's ownership.
   Read `docs/adr/0001-configuration-ownership.md` before changing file ownership.
 - Default profile selection leaves existing software and unrelated services intact.
-- Preserve the optional local `extras.yml` entry point; desktop choice belongs in config.
+- Keep host customization in `config.yml`; expose optional functionality through
+  feature switches and package additions documented in `config.yml.example`.
 
 ## Validation
 

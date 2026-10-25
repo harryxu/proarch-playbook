@@ -1,4 +1,4 @@
 ---
-# Compatibility entry point for older extras files; profile checks prevent mixing desktops.
+# Compatibility entry point for direct task imports; profile checks prevent mixing desktops.
 - name: Configure the explicitly selected KDE profile
   ansible.builtin.import_tasks: desktop/kde/main.yml
