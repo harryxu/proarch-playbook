@@ -49,6 +49,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
       when: verify_user_service | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/extra_keybindings.yml') + """
       when: verify_xremap_entry | default(false)
+    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/keyboard.yml') + """
+      when: verify_keyboard | default(false)
     - ansible.builtin.template:
         src: """ + str(ROOT / 'templates/omarchy/monitors.lua.j2') + """
         dest: "{{ render_file }}"
@@ -57,6 +59,10 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         src: """ + str(ROOT / 'templates/omarchy/autostart.lua.j2') + """
         dest: "{{ autostart_file }}"
       when: desktop_profile == 'omarchy'
+  handlers:
+    - name: Reload Hyprland
+      ansible.builtin.debug:
+        msg: Fixture only; never reload the live desktop.
 """)
     user = command(['id', '-un']).strip()
     base = dict(ansible_become=False, playbook_config_file=str(work / 'absent.yml'),
@@ -88,6 +94,62 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         assert data['features']['rime_ice'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
+
+    # Exercise real keyboard deployment and execute its Lua against a fake API.
+    keyboard_home = work / 'keyboard-home'
+    keyboard_input = keyboard_home / '.config/hypr/input.lua'
+    keyboard_input.parent.mkdir(parents=True)
+    personal_input = '-- Personal input settings must survive.\n'
+    keyboard_input.write_text(personal_input)
+    keyboard_runner = work / 'keyboard-runner.lua'
+    keyboard_runner.write_text('''
+local options = "omarchy:shift_caps_compose,compose:ralt"
+local devices = {}
+hl = {
+  get_config = function(key) assert(key == "input.kb_options"); return options end,
+  config = function(config) options = config.input.kb_options end,
+  device = function(config) devices[config.name] = config.kb_options end,
+}
+dofile(arg[1])
+print(options)
+for _, name in ipairs({"external-pc", 'apple-"keyboard"'}) do
+  print(devices[name] or "inherited")
+end
+''')
+    original_options = 'omarchy:shift_caps_compose,compose:ralt'
+    swapped_options = original_options + ',altwin:swap_alt_win'
+    keyboard_base = dict(desktop_profile='omarchy', verify_keyboard=True,
+                         target_home=str(keyboard_home))
+    for keyboard_type, overrides, expected in [
+        ('mac', [], [original_options, 'inherited', 'inherited']),
+        ('pc', [], [swapped_options, 'inherited', 'inherited']),
+        ('mac', [{'name': 'external-pc', 'type': 'pc'}],
+         [original_options, swapped_options, 'inherited']),
+        ('pc', [{'name': 'apple-"keyboard"', 'type': 'mac'}],
+         [swapped_options, 'inherited', original_options]),
+    ]:
+        selection = keyboard_base | dict(keyboard_type=keyboard_type,
+                                        omarchy_keyboard_overrides=overrides)
+        run(selection)
+        assert keyboard_input.read_text().startswith(personal_input)
+        command(['luac', '-p', str(keyboard_input)])
+        assert command(['lua', str(keyboard_runner), str(keyboard_input)]).splitlines() == expected
+    assert re.search(r'changed=0\b', run(selection)), 'Keyboard deployment is not idempotent'
+    # Switch back to mac and remove the device exception; no stale swaps remain.
+    run(keyboard_base)
+    assert command(['lua', str(keyboard_runner), str(keyboard_input)]).splitlines() == [
+        original_options, 'inherited', 'inherited']
+    assert list(keyboard_input.parent.glob('input.lua.*~')), 'Input changes were not backed up'
+    for invalid in [
+        {'keyboard_type': 'windows'},
+        {'omarchy_keyboard_overrides': {}},
+        {'omarchy_keyboard_overrides': [{'name': '', 'type': 'pc'}]},
+        {'omarchy_keyboard_overrides': [{'name': 'external-pc', 'type': 'unknown'}]},
+        {'omarchy_keyboard_overrides': [{'name': 'same', 'type': 'pc'},
+                                       {'name': 'same', 'type': 'mac'}]},
+    ]:
+        output = run(dict(desktop_profile='omarchy') | invalid, success=False)
+        assert 'keyboard' in output.lower(), output
 
     # A copied example is the only host configuration needed for either profile.
     example_host = work / 'example-config.yml'
@@ -547,6 +609,7 @@ printf x >> "$destination/installs"
     assert re.search(r'changed=0\b', stable_themes), stable_themes
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
     print('      real allowlist copies, per-file backups, preserved desktop/repository,')
+    print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
     print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      latest KDE sources, source-change installation and stable reruns,')
     print('      default-latest Omarchy plugin clone/update and stable reruns,')

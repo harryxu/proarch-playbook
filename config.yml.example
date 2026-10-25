@@ -22,6 +22,22 @@ extra_aur_packages: [] # AUR packages, e.g. [visual-studio-code-bin].
 
 # timezone: Asia/Shanghai
 
+# Keyboard type for this host: mac or pc. Shared by desktop profiles.
+# Currently Omarchy uses pc to swap Alt/Win; mac leaves the mapping unchanged.
+# PC: Alt acts as Super/Command; Win acts as Alt/Option. Ctrl is unchanged.
+# This default applies to every keyboard unless overridden by device below.
+keyboard_type: mac
+
+# For mixed keyboards, run `hyprctl devices` in your Omarchy session.
+# Copy the keyboard's exact device name from the Keyboards section (not its
+# address). Alternatively: hyprctl -j devices | jq -r '.keyboards[].name'
+# Example: MacBook internal keyboard stays mac; an external PC keyboard swaps.
+omarchy_keyboard_overrides: []
+# omarchy_keyboard_overrides:
+#   - name: "replace-with-exact-external-keyboard-name"
+#     type: pc
+# On a pc host, use type: mac here for an external Apple keyboard.
+
 # Machine-specific display settings.
 omarchy_gdk_scale: 2
 omarchy_monitors:

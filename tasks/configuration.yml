@@ -35,6 +35,37 @@
       {{ profile_defaults.omarchy | default({})
          | combine(omarchy_overrides, recursive=true, list_merge='replace') }}
 
+- name: Validate the host keyboard type
+  ansible.builtin.assert:
+    that:
+      - keyboard_type in ['mac', 'pc']
+    fail_msg: Use mac or pc for keyboard_type.
+
+- name: Validate Omarchy keyboard device override list
+  ansible.builtin.assert:
+    that:
+      - omarchy_keyboard_overrides is sequence and omarchy_keyboard_overrides is not string and omarchy_keyboard_overrides is not mapping
+    fail_msg: Use a list for omarchy_keyboard_overrides.
+  when: desktop_profile == 'omarchy'
+
+- name: Validate each Omarchy keyboard override
+  ansible.builtin.assert:
+    that:
+      - item is mapping
+      - item.name is defined and item.name is string and item.name | trim | length > 0
+      - item.type is defined and item.type in ['mac', 'pc']
+      - item.keys() | difference(['name', 'type']) | length == 0
+    fail_msg: Each keyboard override needs a nonempty device name and type mac or pc.
+  loop: "{{ omarchy_keyboard_overrides }}"
+  when: desktop_profile == 'omarchy'
+
+- name: Require unique Omarchy keyboard device overrides
+  ansible.builtin.assert:
+    that:
+      - omarchy_keyboard_overrides | map(attribute='name') | unique(case_sensitive=true) | list | length == omarchy_keyboard_overrides | length
+    fail_msg: Configure each keyboard device name only once.
+  when: desktop_profile == 'omarchy'
+
 - name: Validate feature switches and supported integrations
   ansible.builtin.assert:
     that:

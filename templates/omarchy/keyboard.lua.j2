@@ -1,0 +1,13 @@
+-- Managed by Proarch; configure keyboard types in config.yml.
+do
+  -- Input defaults and personal options have already loaded. Retain them for
+  -- both host and device mappings; a mac override must not inherit the PC swap.
+  local base_options = hl.get_config("input.kb_options") or ""
+  local pc_options = base_options .. (base_options == "" and "" or ",") .. "altwin:swap_alt_win"
+{% if keyboard_type == 'pc' %}
+  hl.config({ input = { kb_options = pc_options } })
+{% endif %}
+{% for keyboard in omarchy_keyboard_overrides %}
+  hl.device({ name = {{ keyboard.name | to_json(ensure_ascii=false) }}, kb_options = {{ 'pc_options' if keyboard.type == 'pc' else 'base_options' }} })
+{% endfor %}
+end

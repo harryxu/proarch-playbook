@@ -41,6 +41,10 @@ dotconfig_paths:
 kde_manage_display_manager: false
 
 # Portable defaults; put hardware-specific values in config.yml.
+keyboard_type: mac
+
+# Omarchy-only device exceptions to the host keyboard type.
+omarchy_keyboard_overrides: []
 omarchy_gdk_scale: 1
 omarchy_monitors:
   - output: ""

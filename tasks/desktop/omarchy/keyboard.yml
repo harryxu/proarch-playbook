@@ -1,0 +1,10 @@
+---
+- name: Configure host and device keyboard mappings without replacing personal input settings
+  ansible.builtin.blockinfile:
+    path: "{{ target_home }}/.config/hypr/input.lua"
+    marker: "-- {mark} PROARCH KEYBOARD"
+    block: "{{ lookup('ansible.builtin.template', playbook_dir + '/templates/omarchy/keyboard.lua.j2') }}"
+    create: true
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland

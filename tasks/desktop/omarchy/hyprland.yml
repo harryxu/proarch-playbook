@@ -1,4 +1,7 @@
 ---
+- name: Configure keyboard types
+  ansible.builtin.import_tasks: keyboard.yml
+
 - name: Copy personal bindings and window appearance
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/files/omarchy/hypr/{{ item }}"
