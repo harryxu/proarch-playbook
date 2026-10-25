@@ -8,7 +8,8 @@ packages:
   - rofi
   - cliphist
   - wl-clipboard
-aur_packages: []
+aur_packages:
+  - herdr-bin
 dotconfig_paths:
   - rofi
   - cliphist
