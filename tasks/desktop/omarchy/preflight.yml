@@ -1,0 +1,78 @@
+---
+- name: Check the installed Omarchy version
+  ansible.builtin.command: omarchy version
+  register: installed_omarchy
+  changed_when: false
+  check_mode: false
+  failed_when: false
+
+- name: Check the installed Lua and Shell configuration capabilities
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - /usr/share/omarchy/default/hypr/bootstrap.lua
+    - /usr/share/omarchy/config/omarchy/shell.json
+    - /usr/lib/systemd/user/omarchy-fcitx5.service
+  register: omarchy_capabilities
+
+- name: Require the supported installed Omarchy environment
+  ansible.builtin.assert:
+    that:
+      - installed_omarchy.rc == 0
+      - installed_omarchy.stdout is match(omarchy_settings.version_pattern)
+      - omarchy_capabilities.results | rejectattr('stat.exists') | list | length == 0
+    fail_msg: >-
+      Install Omarchy first. This profile targets the Omarchy 4.5 Lua/Quickshell
+      configuration, captured from 4.5.0rc1-1. Review compatibility before
+      overriding omarchy_overrides.version_pattern for a newer release.
+
+- name: Validate Omarchy personal configuration
+  ansible.builtin.assert:
+    that:
+      - omarchy_settings.shell is mapping
+      - omarchy_settings.theme is match('^[a-z0-9][a-z0-9-]*$')
+      - omarchy_settings.font_family is string
+      - omarchy_settings.hooks | default([]) is sequence
+      - omarchy_settings.hooks | default([]) is not string
+      - omarchy_settings.plugins is sequence and omarchy_settings.plugins is not string
+      - omarchy_settings.screensaver_enabled is boolean
+      - omarchy_settings.shell_font_size | int > 0
+      - omarchy_gdk_scale | float > 0
+      - omarchy_monitors is sequence and omarchy_monitors is not string
+      - omarchy_monitors | length > 0
+      - omarchy_settings.plugins | map(attribute='id') | unique | list | length == omarchy_settings.plugins | length
+
+- name: Validate plugin sources and pinned revisions
+  ansible.builtin.assert:
+    that:
+      - item.id is match('^[A-Za-z0-9][A-Za-z0-9_.-]*$')
+      - item.repo is match('^https://')
+      - item.version is match('^[0-9a-f]{40}$')
+  loop: "{{ omarchy_settings.plugins }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Validate monitor definitions
+  ansible.builtin.assert:
+    that:
+      - item.output is string
+      - item.mode is string
+      - item.position is string
+      - item.scale | float > 0
+      - item.transform | default(0) | int in range(0, 8)
+  loop: "{{ omarchy_monitors }}"
+
+- name: Preserve Omarchy's bootstrap and verify user override imports
+  ansible.builtin.slurp:
+    src: "{{ target_home }}/.config/hypr/hyprland.lua"
+  register: hyprland_entry
+
+- name: Require the installed personal Lua entry point
+  ansible.builtin.assert:
+    that:
+      - "'default.hypr.omarchy' in (hyprland_entry.content | b64decode)"
+      - "'hypr.bindings' in (hyprland_entry.content | b64decode)"
+      - "'hypr.monitors' in (hyprland_entry.content | b64decode)"
+      - "'hypr.looknfeel' in (hyprland_entry.content | b64decode)"
+      - "'hypr.autostart' in (hyprland_entry.content | b64decode)"
+    fail_msg: The existing Hyprland entry point must load Omarchy defaults and personal overrides.

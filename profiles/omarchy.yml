@@ -1,0 +1,78 @@
+# Desktop defaults; host configuration can override these explicitly.
+features: {}
+packages: []
+aur_packages: []
+dotconfig_paths: []
+omarchy:
+  version_pattern: ^4\.5\.
+  theme: nord
+  font_family: JetBrainsMono Nerd Font
+  shell_font_size: 12
+  screensaver_enabled: false
+  shell:
+    bar:
+      background: glassy
+      layout:
+        center:
+        - format: dddd HH:mm
+          formatAlt: d MMMM 'W'ww yyyy
+          id: omarchy.clock
+          verticalFormat: 'HH
+
+            —
+
+            mm'
+        centerBegin:
+        - id: omarchy.indicators
+        centerEnd:
+        - cities:
+          - name: Shanghai
+            zone: Asia/Shanghai
+          - name: Los Angeles
+            zone: America/Los_Angeles
+          - name: New York
+            zone: America/New_York
+          - name: London
+            zone: Europe/London
+          - name: Dubai
+            zone: Asia/Dubai
+          id: omarchy.elsewhen
+        - id: omarchy.weather
+        - id: omarchy.system-update
+        left:
+        - id: omarchy.menu
+        - id: omarchy.workspaces
+        right:
+        - hidden: []
+          id: omarchy.tray
+          pinned:
+          - chrome_status_icon_1
+        - id: omarchy.keyboard-layout
+        - id: omarchy.agents
+        - id: omarchy.bluetooth
+        - id: omarchy.network
+        - id: omarchy.audio
+        - id: omarchy.monitor
+        - id: omarchy.power
+        tray: []
+      position: top
+    dock:
+      autohide: true
+      pinned:
+      - org.gnome.Nautilus
+      - google-chrome
+      - com.mitchellh.ghostty
+      - omawrite
+      - com.microsoft.VSCode
+      - chatgpt
+    idle:
+      lock: 600
+      screensaver: 999999
+    version: 1
+  plugins:
+  - id: harryxu.dropspace
+    repo: https://github.com/harryxu/omarchy-dropspace.git
+    version: 4ca53457a12f6f48e21c83cc46d01808fbd43095
+  - id: io.github.matt-aaz.quick-capture
+    repo: https://github.com/Matt-aaz/omarchy-quick-capture.git
+    version: 9822a7200a047d389705b81cef12c37e90e0849a

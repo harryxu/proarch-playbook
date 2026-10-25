@@ -1,0 +1,27 @@
+---
+# The caller supplies user_service. Enable units even when there is no live bus.
+- name: Enable the selected user unit for future sessions
+  ansible.builtin.command:
+    argv: [systemctl, --user, --root=/, --no-reload, enable, "{{ user_service }}"]
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+    XDG_CONFIG_HOME: "{{ target_home }}/.config"
+    XDG_RUNTIME_DIR: "/run/user/{{ target_uid }}"
+    LC_ALL: C
+  register: enabled_user_unit
+  changed_when: "'Created symlink' in enabled_user_unit.stderr"
+
+- name: Reload and start the user unit in an active graphical session
+  ansible.builtin.systemd_service:
+    name: "{{ user_service }}"
+    scope: user
+    daemon_reload: "{{ enabled_user_unit.changed or user_service_restart | default(false) }}"
+    state: "{{ 'restarted' if user_service_restart | default(false) else 'started' }}"
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ target_uid }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ target_uid }}/bus"
+  when: has_graphical_session

@@ -1,7 +1,7 @@
 *.vagrant
 *.retry
 roles*
-config.yml
+/config.yml
 inventory/work.yml
 extras.yml
 

@@ -1,0 +1,13 @@
+# Desktop defaults; host configuration can override these explicitly.
+features:
+  cliphist: true
+  vicinae: true
+  rime_ice: true
+packages:
+- rofi
+- cliphist
+- wl-clipboard
+aur_packages: []
+dotconfig_paths:
+- rofi
+- cliphist

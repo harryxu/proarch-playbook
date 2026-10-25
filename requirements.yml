@@ -1,8 +1,5 @@
 ---
-roles:
-  - name: yatesr.timezone
-  - name: rolehippie.starship
-
+# Starship is installed through pacman; external roles are no longer needed.
 collections:
   - name: community.general
   - name: kewlfft.aur

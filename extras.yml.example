@@ -1,5 +1,5 @@
 ---
-- include_tasks: tasks/extra_snapper.yml
-- include_tasks: tasks/extra_keybindings.yml
-- include_tasks: tasks/extra_bluetooth.yml
-- include_tasks: tasks/kde.yml
+# Prefer feature_overrides in config.yml for built-in features.
+# Desktop selection is controlled exclusively by desktop_profile.
+# Add personal task includes here, then save as extras.yml (ignored by Git).
+[]

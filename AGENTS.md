@@ -1,52 +1,50 @@
 # Proarch Playbook
 
-An Ansible playbook that configures a fresh Arch Linux system into a programmer-friendly desktop environment.
+An Ansible playbook that configures an existing Arch Linux desktop as a personal
+development environment with an explicit KDE or Omarchy desktop profile.
 
-## What it does
+## Structure
 
-- Installs core CLI tools (fish, neovim, tmux, zellij, lazygit, fzf, bat, eza, ripgrep, etc.)
-- Sets up dev runtimes: Go, Node.js, Rust
-- Installs desktop apps: Zed, Ghostty, Chrome (AUR), VS Code (AUR)
-- Clones dotconfig from `harryxu/dotconfig` into `~/.config`
-- Configures Docker (via `geerlingguy.docker` role) and Starship prompt
-- Sets fish as the default shell and installs CJK/nerd fonts
-- Optionally applies extras via `extras.yml` (not committed)
+- `main.yml` resolves configuration, checks prerequisites, then runs shared,
+  selected desktop, optional feature, and local extras tasks.
+- `default.config.yml` and `profiles/` hold shared and desktop defaults.
+  `config.yml.example` documents host customization; `config.yml` is ignored.
+- `vars/packages.yml` holds shared package choices.
+- `tasks/common/` handles shared system settings, dotconfig, and input components.
+- `tasks/desktop/` owns KDE and Omarchy overrides and native session integration.
+- `files/omarchy/`, `templates/omarchy/`, and `handlers/` hold personal files,
+  host-dependent configuration, and session-aware updates.
+- `tasks/features/` selects optional Bluetooth, Snapper, and KDE xremap tasks.
+- `test.yml` performs read-only validation; `tests/verify.py` runs isolated checks.
 
-## Project Structure
+## Working conventions
 
-```
-main.yml              # Main playbook entry point
-default.config.yml    # Default variables
-requirements.yml      # External Ansible Galaxy roles
-extras.yml.example    # Template for personal extras
-tasks/
-  setup_aur.yml       # Sets up yay and aur_builder user
-  fcitx5.yml          # Chinese input method (fcitx5)
-  cliphist.yml        # Clipboard history service
-  kde.yml             # KDE Plasma desktop configuration
-  gnome.yml           # GNOME desktop configuration
-  extra_*.yml         # Optional extras (bluetooth, snapper, keybindings)
-roles/                # Ansible Galaxy roles (docker, starship, timezone)
-files/                # Static config files copied to the target system
-inventory/            # Ansible inventory (hosts)
-```
+- Require `desktop_profile: kde` or `omarchy`; validate before system changes.
+- Use `target_user` and the resolved `target_home`, keeping connection identity separate.
+- Install Arch packages through pacman and AUR packages as `aur_builder`.
+- Deploy shared dotconfig through the tracked-file allowlist with backups.
+- Keep Omarchy packaged defaults and generated state under Omarchy's ownership.
+  Read `docs/adr/0001-configuration-ownership.md` before changing file ownership.
+- Default profile selection leaves existing software and unrelated services intact.
+- Preserve the optional local `extras.yml` entry point; desktop choice belongs in config.
 
-## Usage
+## Validation
 
-```shell
-# Install Ansible
-sudo pacman -S ansible
+Install collections with `ansible-galaxy collection install -r requirements.yml`.
+Run syntax checks for both profiles and `python3 tests/verify.py`.
+The integration suite operates only in disposable directories under `/tmp`.
+A full playbook run changes the host; use `test.yml` for prerequisite checks.
 
-# Install required roles
-ansible-galaxy install -r requirements.yml
+## Agent skills
 
-# Run the playbook
-ansible-playbook main.yml
-```
+### Issue tracker
 
-## Notes for AI Agents
+Track issues and specs in GitHub Issues for `harryxu/proarch-playbook`. Before issue operations, read `docs/agents/issue-tracker.md`.
 
-- All tasks target Arch Linux; package management uses `pacman` and `yay` (AUR).
-- AUR packages are installed as the `aur_builder` user (set up in `tasks/setup_aur.yml`).
-- Desktop environment tasks (KDE/GNOME) are in separate task files and not included in `main.yml` by default — include them manually or via `extras.yml`.
-- `files/` contains static configs (e.g., SDDM themes) that are copied verbatim.
+### Triage labels
+
+Use the five default triage labels. Before assigning triage state, read `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout: root `GLOSSARY.md` and `docs/adr/`. Before codebase exploration, read `docs/agents/domain.md`.

@@ -1,2 +1,52 @@
 ---
+# Required: choose kde or omarchy in config.yml or with -e.
+desktop_profile: ""
+target_user: ""
+playbook_config_file: "{{ playbook_dir }}/config.yml"
 timezone: Asia/Shanghai
+
+feature_defaults:
+  docker: true
+  sshd: true
+  dotconfig: true
+  input_method: true
+  rime_ice: false
+  cliphist: false
+  vicinae: false
+  bluetooth: false
+  snapper: false
+  keybindings: false
+feature_overrides: {}
+extra_packages: []
+extra_aur_packages: []
+omarchy_overrides: {}
+
+dotconfig_repo: https://github.com/harryxu/dotconfig.git
+dotconfig_version: main
+dotconfig_source_dir: "{{ target_home }}/.local/share/proarch/dotconfig"
+# Only tracked files below these paths are deployed. Existing files are backed up.
+dotconfig_paths:
+  - fish
+  - git
+  - ghostty
+  - herdr
+  - kitty
+  - nvim
+  - scripts
+  - starship.toml
+  - tmux
+  - wezterm
+  - xremap
+  - zed
+  - zellij
+
+# Login manager changes are opt-in and apply at the next boot/login.
+kde_manage_display_manager: false
+
+# Portable defaults; put hardware-specific values in config.yml.
+omarchy_gdk_scale: 1
+omarchy_monitors:
+  - output: ""
+    mode: preferred
+    position: auto
+    scale: 1

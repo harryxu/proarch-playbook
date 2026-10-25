@@ -1,0 +1,5 @@
+-- Managed by Proarch. Only start helpers for installed user plugins.
+{% if 'harryxu.dropspace' in (omarchy_settings.plugins | map(attribute='id') | list) %}
+local dropspace_autostart = (os.getenv("HOME") or "") .. "/.config/omarchy/plugins/harryxu.dropspace/bin/dropspace-autostart.sh"
+hl.exec_cmd(dropspace_autostart)
+{% endif %}

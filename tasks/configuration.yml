@@ -1,0 +1,48 @@
+---
+- name: Load optional host configuration
+  ansible.builtin.include_vars: "{{ item }}"
+  loop: "{{ query('ansible.builtin.fileglob', playbook_config_file) }}"
+
+- name: Require an explicit supported desktop profile
+  ansible.builtin.assert:
+    that:
+      - desktop_profile in ['kde', 'omarchy']
+    fail_msg: >-
+      Set desktop_profile to kde or omarchy in config.yml, or pass
+      -e desktop_profile=kde / -e desktop_profile=omarchy.
+
+- name: Load desktop defaults in their own namespace
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/profiles/{{ desktop_profile }}.yml"
+    name: profile_defaults
+
+- name: Validate override types
+  ansible.builtin.assert:
+    that:
+      - feature_overrides is mapping
+      - omarchy_overrides is mapping
+      - extra_packages is sequence and extra_packages is not string
+      - extra_aur_packages is sequence and extra_aur_packages is not string
+      - feature_overrides.keys() | difference(feature_defaults.keys()) | length == 0
+    fail_msg: Overrides must use the documented keys and YAML types.
+
+- name: Resolve shared defaults, desktop defaults and host overrides
+  ansible.builtin.set_fact:
+    features: >-
+      {{ feature_defaults | combine(profile_defaults.features, recursive=true)
+         | combine(feature_overrides, recursive=true) }}
+    omarchy_settings: >-
+      {{ profile_defaults.omarchy | default({})
+         | combine(omarchy_overrides, recursive=true, list_merge='replace') }}
+
+- name: Validate feature switches and supported integrations
+  ansible.builtin.assert:
+    that:
+      - features.values() | reject('boolean') | list | length == 0
+      - not features.keybindings or desktop_profile == 'kde'
+      - not features.rime_ice or features.input_method
+      - desktop_profile != 'omarchy' or (not features.cliphist and not features.vicinae)
+    fail_msg: >-
+      Use YAML true/false for feature switches. Legacy xremap supports KDE only.
+      Omarchy owns its clipboard and launcher services; do not start the legacy
+      cliphist or Vicinae integrations there.

@@ -1,17 +1,13 @@
 ---
-- name: Configure host.
+# Read-only configuration and installed-desktop prerequisite checks.
+- name: Validate the selected desktop without applying configuration
   hosts: all
+  gather_facts: false
   become: false
-
   vars_files:
     - default.config.yml
-
-  pre_tasks:
-    # https://stackoverflow.com/a/26399105/157811
-    - name: get the username running the deploy
-      become: false
-      action: command whoami
-      register: current_username
-
   tasks:
-    - include_tasks: tasks/theme.yml
+    - name: Resolve configuration
+      ansible.builtin.import_tasks: tasks/configuration.yml
+    - name: Check the target environment
+      ansible.builtin.import_tasks: tasks/preflight.yml

@@ -1,0 +1,21 @@
+---
+- name: Configure Bluetooth when requested
+  ansible.builtin.include_tasks:
+    file: ../extra_bluetooth.yml
+    apply:
+      tags: [features]
+  when: features.bluetooth
+
+- name: Configure the optional GRUB and Btrfs snapshot integration
+  ansible.builtin.include_tasks:
+    file: ../extra_snapper.yml
+    apply:
+      tags: [features]
+  when: features.snapper
+
+- name: Configure the optional KDE input remapping integration
+  ansible.builtin.include_tasks:
+    file: ../extra_keybindings.yml
+    apply:
+      tags: [features]
+  when: features.keybindings

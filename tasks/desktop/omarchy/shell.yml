@@ -1,0 +1,65 @@
+---
+- name: Build the plugin activation list from installed plugin IDs
+  ansible.builtin.set_fact:
+    omarchy_plugin_entries: []
+
+- name: Preserve optional per-plugin settings
+  ansible.builtin.set_fact:
+    omarchy_plugin_entries: "{{ omarchy_plugin_entries + [item.settings | default({}) | combine({'id': item.id})] }}"
+  loop: "{{ omarchy_settings.plugins }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Deploy the personal Shell configuration
+  ansible.builtin.copy:
+    dest: "{{ target_home }}/.config/omarchy/shell.json"
+    content: "{{ omarchy_settings.shell | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
+"
+    mode: '0600'
+    backup: true
+  notify: Synchronize Omarchy bar appearance
+
+- name: Set the Shell font size without editing terminal configuration
+  community.general.ini_file:
+    path: "{{ target_home }}/.config/omarchy/shell.toml"
+    section: font
+    option: base-size
+    value: "{{ omarchy_settings.shell_font_size }}"
+    no_extra_spaces: false
+    mode: '0644'
+    backup: true
+
+- name: Configure desktop font preferences separately from shared app files
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/omarchy/fonts.conf.j2"
+    dest: "{{ target_home }}/.config/fontconfig/conf.d/99-proarch-fonts.conf"
+    mode: '0644'
+    backup: true
+
+- name: Read the selected Omarchy theme
+  ansible.builtin.command: omarchy theme current
+  register: current_omarchy_theme
+  changed_when: false
+  check_mode: false
+
+- name: Restore theme selection without retinting shared applications
+  ansible.builtin.command:
+    argv: [omarchy, theme, set, "{{ omarchy_settings.theme }}"]
+  environment:
+    OMARCHY_THEME_HEADLESS: '1'
+  when: current_omarchy_theme.stdout | lower | replace(' ', '-') != omarchy_settings.theme
+  changed_when: true
+  notify: Reload Hyprland
+
+- name: Query the explicit screensaver preference
+  ansible.builtin.command: omarchy-toggle-enabled screensaver-off
+  register: screensaver_disabled
+  changed_when: false
+  failed_when: screensaver_disabled.rc not in [0, 1]
+  check_mode: false
+
+- name: Restore the screensaver preference without toggling blindly
+  ansible.builtin.command:
+    argv: [omarchy, toggle, screensaver-off, "{{ 'off' if omarchy_settings.screensaver_enabled else 'on' }}"]
+  when: (screensaver_disabled.rc == 0) == omarchy_settings.screensaver_enabled
+  changed_when: true

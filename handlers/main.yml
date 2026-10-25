@@ -1,0 +1,53 @@
+- name: Rescan Omarchy plugins
+  ansible.builtin.command: omarchy-shell shell rescanPlugins
+  become: true
+  become_user: '{{ target_user }}'
+  environment:
+    HOME: '{{ target_home }}'
+    XDG_RUNTIME_DIR: /run/user/{{ target_uid }}
+    DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
+  when: has_hyprland_session
+  changed_when: true
+- name: Synchronize Omarchy bar appearance
+  ansible.builtin.command: omarchy bar sync-glass
+  become: true
+  become_user: '{{ target_user }}'
+  environment:
+    HOME: '{{ target_home }}'
+    XDG_CONFIG_HOME: '{{ target_home }}/.config'
+    OMARCHY_PATH: /usr/share/omarchy
+    HYPRLAND_INSTANCE_SIGNATURE: '{{ ansible_facts.env.HYPRLAND_INSTANCE_SIGNATURE
+      | default('''') }}'
+  when: has_hyprland_session
+  changed_when: true
+  notify: Reload Hyprland
+- name: Reload Fcitx5 configuration
+  ansible.builtin.command:
+    argv:
+    - busctl
+    - --user
+    - call
+    - org.fcitx.Fcitx5
+    - /controller
+    - org.fcitx.Fcitx.Controller1
+    - ReloadConfig
+  become: true
+  become_user: '{{ target_user }}'
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ target_uid }}
+    DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
+  when: has_graphical_session
+  changed_when: true
+- name: Reload user systemd units
+  ansible.builtin.systemd_service:
+    scope: user
+    daemon_reload: true
+  become: true
+  become_user: '{{ target_user }}'
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ target_uid }}
+    DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
+  when: user_bus.stat.exists
+- name: Reload Hyprland
+  ansible.builtin.include_tasks: hyprland.yml
+  when: has_hyprland_session

@@ -1,0 +1,61 @@
+---
+- name: Retire the old standalone input autostart
+  ansible.builtin.import_tasks: ../../common/legacy_input_autostart.yml
+
+- name: Ensure the input method directory exists
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/fcitx5"
+    state: directory
+    mode: '0755'
+
+- name: Inspect the existing input method profile
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.config/fcitx5/profile"
+  register: fcitx_profile_file
+
+- name: Read the existing input method profile
+  ansible.builtin.slurp:
+    src: "{{ target_home }}/.config/fcitx5/profile"
+  register: fcitx_profile
+  when: fcitx_profile_file.stat.exists
+
+- name: Determine whether the captured keyboard and Rime selection is present
+  ansible.builtin.set_fact:
+    restore_fcitx_profile: >-
+      {{ not fcitx_profile_file.stat.exists
+         or not ((fcitx_profile.content | default('') | b64decode) is search('(?m)^DefaultIM=rime$'))
+         or not ((fcitx_profile.content | default('') | b64decode) is search('(?m)^Name=keyboard-us$'))
+         or not ((fcitx_profile.content | default('') | b64decode) is search('(?m)^Name=rime$')) }}
+
+- name: Restore the captured input profile without racing the live daemon
+  block:
+    - name: Stop the session input service only when its profile needs changing
+      ansible.builtin.systemd_service:
+        name: omarchy-fcitx5.service
+        scope: user
+        state: stopped
+      when: restore_fcitx_profile and has_graphical_session
+
+    - name: Restore the keyboard-us and Rime profile with a backup
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/omarchy/fcitx5-profile"
+        dest: "{{ target_home }}/.config/fcitx5/profile"
+        mode: '0644'
+        backup: true
+      when: restore_fcitx_profile
+
+    - name: Restore the candidate page size
+      community.general.ini_file:
+        path: "{{ target_home }}/.config/fcitx5/config"
+        section: Behavior
+        option: DefaultPageSize
+        value: '9'
+        no_extra_spaces: true
+        mode: '0644'
+        backup: true
+      notify: Reload Fcitx5 configuration
+  always:
+    - name: Enable the Omarchy-owned session service
+      ansible.builtin.include_tasks: ../../common/user_service.yml
+      vars:
+        user_service: omarchy-fcitx5.service
