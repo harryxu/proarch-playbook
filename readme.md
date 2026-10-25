@@ -180,6 +180,39 @@ are enabled for future sessions even without a live bus, and started only in an
 active graphical session. Shell JSON and plugin code hot-reload normally;
 headless provisioning takes effect on the next login.
 
+## Independent application themes
+
+The Omarchy profile defaults to `independent_app_themes: true`. It prevents
+Omarchy's theme switch from retinting VS Code and browsers. Each application's
+selected theme and automatic light/dark preference remain under its own control.
+Ansible does not edit VS Code settings, browser preferences or enterprise policies,
+and does not select a theme or light/dark mode for these applications.
+
+```yaml
+omarchy_overrides:
+  independent_app_themes: true
+```
+
+Omarchy 4.5 supplies the VS Code opt-out but no Chromium opt-out. User-owned
+guards intercept the browser retint command using a dedicated PATH directory;
+login Bash, UWSM, fish, and personal Hyprland autostart load that directory.
+The playbook's own theme restore also uses this guard before the next login.
+The Omarchy theme picker launches login Bash, so it reads the guard immediately
+after deployment. Existing terminals need a new shell, and direct session
+launches receive the environment after login or the managed Hyprland reload.
+The Chromium retint command is shared by Chrome, Chromium, Edge, and Brave,
+so the guard skips that shared retint step. Firefox has no dedicated retint step
+in this Omarchy version; its guard supports a future matching command.
+
+Choose themes and light/dark behavior inside each application. If an application
+is configured to follow the system, that application can still react to the OS
+color preference. Existing settings and previously installed browser policies
+are left untouched; this feature prevents future Omarchy retints, rather than
+undoing past changes. Packaged Omarchy files are never patched.
+
+`independent_app_themes: false` stops managing this feature; like other optional
+features, it does not remove previously deployed opt-out flags or guards.
+
 ## Layout and checks
 
 ```text

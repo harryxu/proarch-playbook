@@ -29,6 +29,8 @@ def command(args, **kwargs):
 with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     work = Path(temporary)
     (work / 'profiles').symlink_to(ROOT / 'profiles', target_is_directory=True)
+    (work / 'files').symlink_to(ROOT / 'files', target_is_directory=True)
+    (work / 'templates').symlink_to(ROOT / 'templates', target_is_directory=True)
     harness = work / 'verify.yml'
     harness.write_text("""---
 - hosts: all
@@ -194,6 +196,142 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     for path in (ROOT / 'files/omarchy/hypr').glob('*.lua'):
         command(['luac', '-p', str(path)])
 
+    # Deploy only Omarchy opt-outs; application files must remain byte-for-byte intact.
+    app_home = work / 'app-home'
+    policy_root = work / 'browser-policy-root'
+    code_settings = app_home / '.config/Code/User/settings.json'
+    code_settings.parent.mkdir(parents=True)
+    original_code = '''{
+  // Keep this comment and the manually chosen theme.
+  "workbench.colorTheme": "Light+",
+  "window.autoDetectColorScheme": true,
+  "custom.url": "https://example.invalid//keep",
+  "nested": {"window.autoDetectColorScheme": true},
+}
+'''
+    code_settings.write_text(original_code)
+    code_settings.chmod(0o600)
+    (app_home / '.bash_profile').write_text('export KEEP_ME=yes\n')
+    chrome_policy = policy_root / 'etc/opt/chrome/policies/managed/color.json'
+    chrome_policy.parent.mkdir(parents=True)
+    chrome_policy.write_text(json.dumps({'BrowserThemeColor': '#123456',
+                                        'BrowserColorScheme': 'device', 'BrowserSignin': 0}))
+    firefox_policy = policy_root / 'etc/firefox/policies/policies.json'
+    firefox_policy.parent.mkdir(parents=True)
+    firefox_policy.write_text(json.dumps({'policies': {'DisableTelemetry': True,
+                                         'Preferences': {'browser.tabs.warnOnClose': False}}}))
+    original_chrome = chrome_policy.read_bytes()
+    original_firefox = firefox_policy.read_bytes()
+    app_play = work / 'apps.yml'
+    app_play.write_text(json.dumps([{
+        'name': 'Verify independent app themes in disposable directories',
+        'hosts': 'all', 'gather_facts': False, 'become': False,
+        'vars_files': [str(ROOT / 'default.config.yml')],
+        'vars': {'desktop_profile': 'omarchy', 'target_home': str(app_home),
+                 'target_user': user, 'proarch_policy_root': str(policy_root),
+                 'playbook_config_file': str(work / 'absent.yml')},
+        'environment': {'HOME': str(app_home)},
+        'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/configuration.yml')},
+                  {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/app_themes.yml')}],
+    }]))
+
+    def configure_app_themes(overrides=None):
+        return command(['ansible-playbook', str(app_play), '-i', 'localhost,', '-c', 'local',
+                        '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
+                                         'target_user': user, 'playbook_config_file': str(work / 'absent.yml'),
+                                         'omarchy_overrides': overrides or {}})])
+
+    configure_app_themes()
+    assert code_settings.read_text() == original_code
+    assert code_settings.stat().st_mode & 0o777 == 0o600
+    assert not list(code_settings.parent.glob('settings.json.*'))
+    assert 'export KEEP_ME=yes' in (app_home / '.bash_profile').read_text()
+    assert not (app_home / '.config/Code - Insiders').exists()
+    assert not (app_home / '.mozilla').exists(), 'Created a Firefox profile unnecessarily'
+    assert chrome_policy.read_bytes() == original_chrome
+    assert firefox_policy.read_bytes() == original_firefox
+    stable_apps = configure_app_themes()
+    assert re.search(r'changed=0\b', stable_apps), stable_apps
+
+    # Guards leave all preferences/policies unchanged under repeated theme retints.
+    guard_bin = app_home / '.local/share/proarch/app-theme-guards/bin'
+    fake_native = work / 'fake-native-omarchy'
+    (fake_native / 'bin').mkdir(parents=True)
+    native_marker = work / 'theme-retint-calls'
+    for name in ['omarchy-theme-set-browser', 'omarchy-theme-set-firefox']:
+        binary = fake_native / 'bin' / name
+        binary.write_text('#!/bin/bash\nprintf "%s\\n" "$@" >> "$THEME_TEST_MARKER"\n')
+        binary.chmod(0o755)
+    app_environment = ENV | {'HOME': str(app_home), 'OMARCHY_PATH': str(fake_native),
+                             'THEME_TEST_MARKER': str(native_marker),
+                             'PATH': str(guard_bin) + ':' + ENV['PATH']}
+    before_retint = [code_settings.read_bytes(), chrome_policy.read_bytes(), firefox_policy.read_bytes()]
+    for color in ['dark', 'light']:
+        for name in ['omarchy-theme-set-browser', 'omarchy-theme-set-firefox']:
+            result = subprocess.run([str(guard_bin / name), color], env=app_environment,
+                                    text=True, capture_output=True)
+            assert result.returncode == 0, result.stderr
+    assert not native_marker.exists(), 'Browser retint guard delegated while disabled'
+    assert before_retint == [code_settings.read_bytes(), chrome_policy.read_bytes(), firefox_policy.read_bytes()]
+    # A wrapper delegates to the packaged entry point when its flag is removed.
+    browser_flag = app_home / '.local/state/omarchy/toggles/skip-browser-theme-changes'
+    browser_flag.unlink()
+    subprocess.run([str(guard_bin / 'omarchy-theme-set-browser'), 'literal argument'],
+                   env=app_environment, check=True)
+    assert native_marker.read_text() == 'literal argument\n'
+    browser_flag.touch()
+    # A playbook-triggered theme restore must use the same guards before login.
+    # Exercise the real Shell tasks with a fake Omarchy CLI, never the live desktop.
+    (app_home / '.config/fontconfig/conf.d').mkdir(parents=True)
+    fake_cli = fake_native / 'bin/omarchy'
+    fake_cli.write_text('''#!/bin/bash
+case "$1 $2" in
+  'theme current') echo old-theme ;;
+  'theme set') omarchy-theme-set-browser "$3" ;;
+esac
+''')
+    fake_cli.chmod(0o755)
+    fake_toggle = fake_native / 'bin/omarchy-toggle-enabled'
+    fake_toggle.write_text('#!/bin/bash\nexit 1\n')
+    fake_toggle.chmod(0o755)
+    restore_play = work / 'restore-theme.yml'
+    restore_play.write_text(json.dumps([{
+        'name': 'Verify the actual theme restoration uses guards',
+        'hosts': 'all', 'gather_facts': False, 'become': False,
+        'vars_files': [str(ROOT / 'default.config.yml')],
+        'vars': {'target_home': str(app_home),
+                 'ansible_facts': {'env': {'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']}}},
+        'environment': {'HOME': str(app_home), 'OMARCHY_PATH': str(fake_native),
+                        'THEME_TEST_MARKER': str(native_marker),
+                        'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']},
+        'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/configuration.yml')},
+                  {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/shell.yml')}],
+        'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
+                     for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
+    }]))
+    command(['ansible-playbook', str(restore_play), '-i', 'localhost,', '-c', 'local',
+             '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
+                              'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})])
+    assert native_marker.read_text() == 'literal argument\n', 'Playbook theme restore bypassed guards'
+    # Resolve through login Bash and fish without executing any native retint.
+    resolved = subprocess.run(['bash', '-lc', 'command -v omarchy-theme-set-browser'],
+                              env=app_environment, text=True, capture_output=True, check=True)
+    assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser'), resolved.stdout
+    if shutil.which('fish'):
+        resolved = subprocess.run(['fish', '--no-config', '-c',
+                                   'source "$HOME/.config/fish/conf.d/proarch-app-themes.fish"; command -s omarchy-theme-set-browser'],
+                                  env=app_environment, text=True, capture_output=True, check=True)
+        assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser')
+    assert code_settings.read_text() == original_code
+    assert chrome_policy.read_bytes() == original_chrome
+    assert firefox_policy.read_bytes() == original_firefox
+    # Users may change their application theme; redeployment must leave it alone.
+    custom_code = original_code.replace('Light+', 'User-selected dark theme')
+    code_settings.write_text(custom_code)
+    stable_apps = configure_app_themes()
+    assert re.search(r'changed=0\b', stable_apps), stable_apps
+    assert code_settings.read_text() == custom_code
+
     # Real KDE sync tasks against a local upstream; installer stubs stay inside /tmp.
     upstream = work / 'theme-upstream'
     upstream.mkdir()
@@ -304,4 +442,5 @@ printf x >> "$destination/installs"
     print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      latest KDE sources, source-change installation and stable reruns,')
     print('      default-latest Omarchy plugin clone/update and stable reruns,')
+    print('      Omarchy retint opt-outs, untouched app settings/policies and browser guards,')
     print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')

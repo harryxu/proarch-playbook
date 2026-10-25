@@ -47,6 +47,9 @@
     argv: [omarchy, theme, set, "{{ omarchy_settings.theme }}"]
   environment:
     OMARCHY_THEME_HEADLESS: '1'
+    PATH: >-
+      {{ (target_home ~ '/.local/share/proarch/app-theme-guards/bin:' if omarchy_settings.independent_app_themes else '')
+         ~ (ansible_facts.env.PATH | default('/usr/local/bin:/usr/bin')) }}
   when: current_omarchy_theme.stdout | lower | replace(' ', '-') != omarchy_settings.theme
   changed_when: true
   notify: Reload Hyprland

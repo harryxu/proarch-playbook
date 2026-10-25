@@ -32,6 +32,10 @@
     - name: Deploy personal Hyprland overrides
       ansible.builtin.include_tasks: hyprland.yml
 
+    - name: Keep application themes independent of the desktop
+      ansible.builtin.include_tasks: app_themes.yml
+      when: omarchy_settings.independent_app_themes
+
     - name: Deploy Shell preferences and restore selected appearance
       ansible.builtin.include_tasks: shell.yml
 

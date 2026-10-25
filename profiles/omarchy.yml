@@ -10,6 +10,7 @@ omarchy:
   font_family: JetBrainsMono Nerd Font
   shell_font_size: 12
   screensaver_enabled: false
+  independent_app_themes: true
   shell:
     bar:
       background: glassy

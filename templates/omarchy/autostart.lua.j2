@@ -1,4 +1,14 @@
 -- Managed by Proarch. Only start helpers for installed user plugins.
+{% if omarchy_settings.independent_app_themes %}
+-- Personal command overrides follow Omarchy defaults, before any app launches.
+local theme_guard_bin = (os.getenv("HOME") or "") .. "/.local/share/proarch/app-theme-guards/bin"
+local omarchy_bin = (os.getenv("OMARCHY_PATH") or "/usr/share/omarchy") .. "/bin"
+local guarded_path = { theme_guard_bin, omarchy_bin }
+for entry in (os.getenv("PATH") or "/usr/local/bin:/usr/bin"):gmatch("[^:]+") do
+  if entry ~= theme_guard_bin and entry ~= omarchy_bin then table.insert(guarded_path, entry) end
+end
+hl.env("PATH", table.concat(guarded_path, ":"))
+{% endif %}
 {% if 'harryxu.dropspace' in (omarchy_settings.plugins | map(attribute='id') | list) %}
 local dropspace_autostart = (os.getenv("HOME") or "") .. "/.config/omarchy/plugins/harryxu.dropspace/bin/dropspace-autostart.sh"
 hl.exec_cmd(dropspace_autostart)

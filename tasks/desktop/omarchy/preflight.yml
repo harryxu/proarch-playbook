@@ -36,6 +36,7 @@
       - omarchy_settings.hooks | default([]) is not string
       - omarchy_settings.plugins is sequence and omarchy_settings.plugins is not string
       - omarchy_settings.screensaver_enabled is boolean
+      - omarchy_settings.independent_app_themes is boolean
       - omarchy_settings.shell_font_size | int > 0
       - omarchy_gdk_scale | float > 0
       - omarchy_monitors is sequence and omarchy_monitors is not string
@@ -52,6 +53,25 @@
   loop: "{{ omarchy_settings.plugins }}"
   loop_control:
     label: "{{ item.id }}"
+
+- name: Read the installed theme integration entry points
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  loop:
+    - /usr/bin/omarchy-theme-set
+    - /usr/bin/omarchy-theme-set-vscode
+  register: omarchy_theme_entry_points
+  when: omarchy_settings.independent_app_themes
+
+- name: Require the supported user-level theme opt-out integration
+  ansible.builtin.assert:
+    that:
+      - >-
+        (omarchy_theme_entry_points.results[0].content | b64decode)
+        is search('(?m)^ +omarchy-theme-set-browser$')
+      - "'skip-vscode-theme-changes' in (omarchy_theme_entry_points.results[1].content | b64decode)"
+    fail_msg: Review Omarchy's theme command integration before enabling independent application themes.
+  when: omarchy_settings.independent_app_themes
 
 - name: Validate monitor definitions
   ansible.builtin.assert:

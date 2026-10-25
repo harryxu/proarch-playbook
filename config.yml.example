@@ -18,6 +18,7 @@ omarchy_monitors:
     scale: 2
 
 omarchy_overrides:
+  independent_app_themes: true
   shell:
     idle:
       lock: 600
