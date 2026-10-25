@@ -12,7 +12,6 @@ common_packages:
 - vim
 - neovim
 - tmux
-- zellij
 - lazygit
 - btop
 - fzf

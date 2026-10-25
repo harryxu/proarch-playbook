@@ -35,10 +35,8 @@ dotconfig_paths:
   - scripts
   - starship.toml
   - tmux
-  - wezterm
   - xremap
   - zed
-  - zellij
 
 # Login manager changes are opt-in and apply at the next boot/login.
 kde_manage_display_manager: false
