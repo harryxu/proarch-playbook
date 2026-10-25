@@ -1,0 +1,40 @@
+---
+- name: Install shared Fcitx5 and Rime components
+  community.general.pacman:
+    name: [fcitx5, fcitx5-configtool, fcitx5-gtk, fcitx5-qt, fcitx5-chinese-addons, fcitx5-rime]
+    state: present
+
+- name: Configure the optional Rime Ice preference
+  when: features.rime_ice
+  block:
+    - name: Install the existing optional input method additions
+      community.general.pacman:
+        name: [fcitx5-pinyin-zhwiki, fcitx5-material-color]
+        state: present
+
+    - name: Install Rime Ice from AUR
+      kewlfft.aur.aur:
+        name: rime-ice-git
+        use: yay
+        state: present
+      become: true
+      become_user: aur_builder
+
+    - name: Ensure the Rime user directory exists
+      ansible.builtin.file:
+        path: "{{ target_home }}/.local/share/fcitx5/rime"
+        state: directory
+        owner: "{{ target_user }}"
+        mode: '0755'
+
+    - name: Preserve the existing Rime Ice personal preference
+      ansible.builtin.copy:
+        dest: "{{ target_home }}/.local/share/fcitx5/rime/default.custom.yaml"
+        content: |
+          patch:
+            __include: rime_ice_suggestion:/
+            menu:
+              page_size: 9
+        owner: "{{ target_user }}"
+        mode: '0644'
+        backup: true

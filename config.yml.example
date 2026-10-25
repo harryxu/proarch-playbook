@@ -1,0 +1,42 @@
+---
+# Copy to config.yml (already ignored by Git). There is no implicit desktop.
+desktop_profile: omarchy # kde or omarchy
+# target_user: harry     # Defaults to the connection user, not root via become.
+
+feature_overrides:
+  docker: true
+  sshd: true
+  dotconfig: true
+  input_method: true
+  rime_ice: true # Both profiles; requires input_method.
+  bluetooth: false
+  snapper: false
+  keybindings: false # xremap; KDE only
+  # Uncomment to override the selected profile's defaults:
+  # cliphist: false   # KDE: true; Omarchy: must remain false.
+  # vicinae: false    # KDE: true; Omarchy: must remain false.
+
+# Additional software alongside the shared and desktop package lists.
+extra_packages: []     # Official Arch packages, e.g. [jq, tree].
+extra_aur_packages: [] # AUR packages, e.g. [visual-studio-code-bin].
+
+# timezone: Asia/Shanghai
+
+# Machine-specific display settings.
+omarchy_gdk_scale: 2
+omarchy_monitors:
+  - output: ""
+    mode: preferred
+    position: auto
+    scale: 2
+
+omarchy_overrides:
+  independent_app_themes: true
+  shell:
+    # Only bar.background and dock.autohide are managed by default.
+    # Other bar/dock settings remain user-owned unless explicitly added here.
+    idle:
+      lock: 600
+
+# KDE only: enable SDDM for the next login without stopping this session.
+# kde_manage_display_manager: true

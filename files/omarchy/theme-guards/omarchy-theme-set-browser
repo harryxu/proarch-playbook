@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+
+if [[ -f "$HOME/.local/state/omarchy/toggles/skip-browser-theme-changes" ]]; then
+  exit 0
+fi
+
+exec "${OMARCHY_PATH:-/usr/share/omarchy}/bin/omarchy-theme-set-browser" "$@"

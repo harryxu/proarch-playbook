@@ -1,0 +1,69 @@
+---
+- name: Disconnect the packaged Neovim theme bridge without choosing an editor theme
+  ansible.builtin.include_tasks: neovim_theme.yml
+
+- name: Prepare user-owned theme protection directories
+  ansible.builtin.file:
+    path: "{{ target_home }}/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - .local/share/proarch/app-theme-guards/bin
+    - .local/state/omarchy/toggles
+    - .config/omarchy
+    - .config/uwsm/env.d
+    - .config/fish/conf.d
+
+- name: Disable editor and browser retinting using explicit state flags
+  ansible.builtin.file:
+    path: "{{ target_home }}/.local/state/omarchy/toggles/{{ item }}"
+    state: touch
+    mode: '0644'
+    access_time: preserve
+    modification_time: preserve
+  loop:
+    - skip-vscode-theme-changes
+    - skip-vscode-insiders-theme-changes
+    - skip-browser-theme-changes
+    - skip-firefox-theme-changes
+
+- name: Install user-owned browser theme guards
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/theme-guards/{{ item }}"
+    dest: "{{ target_home }}/.local/share/proarch/app-theme-guards/bin/{{ item }}"
+    mode: '0755'
+    backup: true
+  loop:
+    - omarchy-theme-set-browser
+    - omarchy-theme-set-firefox
+
+- name: Install the shared login environment override
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/theme-guards/path.sh"
+    dest: "{{ target_home }}/.config/omarchy/app-theme-path.sh"
+    mode: '0644'
+    backup: true
+
+- name: Load theme protection from login Bash, including the Omarchy theme picker
+  ansible.builtin.blockinfile:
+    path: "{{ target_home }}/.bash_profile"
+    marker: '# {mark} PROARCH APP THEME GUARDS'
+    block: '. "$HOME/.config/omarchy/app-theme-path.sh"'
+    create: true
+    mode: '0644'
+    backup: true
+
+- name: Load theme protection in future graphical sessions
+  ansible.builtin.copy:
+    dest: "{{ target_home }}/.config/uwsm/env.d/90-proarch-app-themes"
+    content: |
+      . "$HOME/.config/omarchy/app-theme-path.sh"
+    mode: '0644'
+    backup: true
+
+- name: Load theme protection in new fish shells
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/theme-guards/path.fish"
+    dest: "{{ target_home }}/.config/fish/conf.d/proarch-app-themes.fish"
+    mode: '0644'
+    backup: true

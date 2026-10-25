@@ -1,0 +1,201 @@
+---
+- name: Install KDE packages.
+  community.general.pacman:
+    name:
+      - kdiff3
+      - kommit
+      - kvantum
+      - sddm
+      - kwallet-pam
+    state: present
+- name: Install KDE Apps from aur.
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name:
+      - konsave
+      - sddm-silent-theme
+  become: true
+  become_user: aur_builder
+- name: Setup KDE theme
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+  block:
+    - name: Ensure KDE personal directories exist
+      ansible.builtin.file:
+        path: "{{ target_home }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - .config/Kvantum
+        - .local/share/kwin/tabbox
+    - name: Synchronize KDE theme sources
+      ansible.builtin.import_tasks: theme_sources.yml
+    - name: Enable theme
+      community.general.kdeconfig:
+        kwriteconfig_path: /usr/bin/kwriteconfig6
+        path: "{{ target_home }}/.config/plasmarc"
+        values:
+          - group: Theme
+            key: name
+            value: Graphite-nord-light
+        backup: true
+    - name: Ensure tabbox directory exists.
+      become: true
+      ansible.builtin.file:
+        path: "{{ target_home }}/.local/share/kwin/tabbox"
+        recurse: true
+        state: directory
+      become_user: "{{ target_user }}"
+      environment:
+        HOME: "{{ target_home }}"
+    - name: Configure KWin preferences
+      community.general.kdeconfig:
+        kwriteconfig_path: /usr/bin/kwriteconfig6
+        path: "{{ target_home }}/.config/kwinrc"
+        values:
+          - group: org.kde.kdecoration2
+            key: library
+            value: org.kde.kwin.aurorae
+          - group: org.kde.kdecoration2
+            key: theme
+            value: __aurorae__svg__Graphite-light
+          - group: TabBox
+            key: ApplicationsMode
+            value: 1
+          - group: TabBox
+            key: HighlightWindows
+            bool_value: false
+          - group: TabBox
+            key: LayoutName
+            value: AquaMediumIcons
+          - group: Desktops
+            key: Number
+            value: 3
+        backup: true
+    - name: Setup kdeglobals
+      community.general.kdeconfig:
+        kwriteconfig_path: /usr/bin/kwriteconfig6
+        path: "{{ target_home }}/.config/kdeglobals"
+        values:
+          - group: KDE
+            key: AnimationDurationFactor
+            value: 0.5
+          - group: KDE
+            key: LookAndFeelPackage
+            value: com.github.vinceliuice.Graphite-nord-light
+          - group: KDE
+            key: widgetStyle
+            value: kvantum
+        backup: true
+    - name: Configure Kvantum theme
+      ansible.builtin.copy:
+        dest: "{{ target_home }}/.config/Kvantum/kvantum.kvconfig"
+        content: "[General]\ntheme=Graphite\n"
+        force: false
+        mode: "0644"
+- name: Setup Screen Locking
+  become: true
+  become_user: "{{ target_user }}"
+  community.general.kdeconfig:
+    kwriteconfig_path: /usr/bin/kwriteconfig6
+    path: "{{ target_home }}/.config/kscreenlockerrc"
+    values:
+      - group: Greeter
+        key: WallpaperPlugin
+        value: org.kde.potd
+      - groups:
+          - Greeter
+          - Wallpaper
+          - org.kde.potd
+          - General
+        key: Provider
+        value: bing
+      - groups:
+          - Greeter
+          - Wallpaper
+          - org.kde.potd
+          - General
+        key: UpdateOverMeteredConnection
+        bool_value: true
+    backup: true
+- name: Configure SDDM theme
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: Theme
+    option: Current
+    value: silent
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
+  become: true
+- name: Copy SDDM silent theme background image
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/backgrounds/ristretto.jpg"
+    dest: /usr/share/sddm/themes/silent/backgrounds/random.jpg
+    force: false
+    mode: "0644"
+  become: true
+- name: Check if random-backgrounds directory exists
+  ansible.builtin.stat:
+    path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+  register: random_backgrounds_dir
+  become: true
+- name: Download and extract random-backgrounds
+  when: not random_backgrounds_dir.stat.exists
+  become: true
+  block:
+    - name: Download random-backgrounds.zip
+      ansible.builtin.get_url:
+        url: https://github.com/harryxu/proarch-playbook/releases/download/0.1/random-backgrounds.zip
+        dest: /tmp/random-backgrounds.zip
+        mode: "0644"
+    - name: Ensure random-backgrounds directory exists
+      ansible.builtin.file:
+        path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+        state: directory
+        mode: "0755"
+    - name: Extract random-backgrounds.zip
+      ansible.builtin.unarchive:
+        src: /tmp/random-backgrounds.zip
+        dest: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+        remote_src: true
+- name: Copy randombg.sh to SDDM silent theme directory
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/randombg.sh"
+    dest: /usr/share/sddm/themes/silent/randombg.sh
+    mode: "0755"
+    force: true
+  become: true
+- name: Ensure systemd sddm.service drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/sddm.service.d
+    state: directory
+    mode: "0755"
+  become: true
+- name: Install systemd drop-in to run randombg.sh before SDDM
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sddm.service.d/randombg.conf
+    mode: "0644"
+    content: "[Service]\nExecStartPre=/usr/share/sddm/themes/silent/randombg.sh\n"
+  become: true
+  notify: Reload systemd manager
+- name: Copy SDDM silent theme altumfish config
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/configs/altumfish.conf"
+    dest: /usr/share/sddm/themes/silent/configs/altumfish.conf
+    force: false
+    mode: "0644"
+  become: true
+- name: Update SDDM silent theme ConfigFile to altumfish.conf
+  community.general.ini_file:
+    path: /usr/share/sddm/themes/silent/metadata.desktop
+    section: SddmGreeterTheme
+    option: ConfigFile
+    value: configs/altumfish.conf
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
+  become: true

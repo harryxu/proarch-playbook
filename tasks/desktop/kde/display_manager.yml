@@ -1,0 +1,25 @@
+---
+- name: Inspect the current display manager link
+  ansible.builtin.stat:
+    path: /etc/systemd/system/display-manager.service
+  register: display_manager_link
+
+- name: Resolve the current display manager
+  ansible.builtin.command: readlink -f /etc/systemd/system/display-manager.service
+  register: current_dm_target
+  changed_when: false
+  check_mode: false
+  when: display_manager_link.stat.exists and display_manager_link.stat.islnk
+
+- name: Disable another display manager for the next boot without stopping it
+  ansible.builtin.systemd_service:
+    name: "{{ current_dm_target.stdout | basename }}"
+    enabled: false
+  when:
+    - current_dm_target.stdout | default('') | length > 0
+    - "'sddm.service' not in current_dm_target.stdout"
+
+- name: Enable SDDM for the next boot without interrupting this session
+  ansible.builtin.systemd_service:
+    name: sddm.service
+    enabled: true

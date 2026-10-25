@@ -1,0 +1,53 @@
+---
+- name: Deploy only explicitly selected tracked dotconfig files
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+  block:
+    - name: Validate dotconfig paths
+      ansible.builtin.assert:
+        that:
+          - dotconfig_source_dir != target_home ~ '/.config'
+          - dotconfig_paths is sequence and dotconfig_paths is not string
+          - item is match('^[A-Za-z0-9_.-]+$')
+          - item not in ['.', '..', '.git', 'hypr', 'omarchy']
+        fail_msg: Use top-level shared configuration paths and a separate source checkout.
+      loop: "{{ dotconfig_paths + profile_defaults.dotconfig_paths }}"
+
+    - name: Create the source checkout parent
+      ansible.builtin.file:
+        path: "{{ dotconfig_source_dir | dirname }}"
+        state: directory
+        mode: '0755'
+
+    - name: Check out dotconfig outside the live configuration directory
+      ansible.builtin.git:
+        repo: "{{ dotconfig_repo }}"
+        dest: "{{ dotconfig_source_dir }}"
+        version: "{{ dotconfig_version }}"
+        update: true
+        force: false
+
+    - name: Check whether the source checkout is available
+      ansible.builtin.stat:
+        path: "{{ dotconfig_source_dir }}/.git"
+      register: dotconfig_source
+
+    - name: List tracked allowlisted files
+      ansible.builtin.command:
+        argv: "{{ ['git', 'ls-files', '-z', '--'] + dotconfig_paths + profile_defaults.dotconfig_paths }}"
+        chdir: "{{ dotconfig_source_dir }}"
+      register: dotconfig_tracked
+      changed_when: false
+      check_mode: false
+      when: dotconfig_source.stat.exists
+
+    - name: Deploy the available tracked files
+      ansible.builtin.include_tasks: dotconfig_files.yml
+      when: dotconfig_source.stat.exists
+
+    - name: Explain first-install check mode limitations
+      ansible.builtin.debug:
+        msg: The source checkout is not present yet; file diffs can be previewed after it is cloned.
+      when: not dotconfig_source.stat.exists

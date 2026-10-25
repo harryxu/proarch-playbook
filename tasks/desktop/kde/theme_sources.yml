@@ -1,0 +1,51 @@
+---
+- name: Check if Graphite KDE theme is installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.local/share/plasma/desktoptheme/Graphite-nord-light"
+  register: graphite_installed
+- name: Update Graphite KDE theme source
+  ansible.builtin.git:
+    repo: "{{ profile_defaults.theme_repositories.graphite }}"
+    dest: "{{ target_home }}/.local/share/proarch/themes/graphite"
+    clone: true
+    update: true
+    version: "HEAD"
+    force: false
+  notify: Update installed Graphite KDE theme
+- name: Install Graphite KDE theme.
+  when: not graphite_installed.stat.exists and not ansible_check_mode
+  ansible.builtin.command:
+    argv:
+      - ./install.sh
+    chdir: "{{ target_home }}/.local/share/proarch/themes/graphite"
+    creates: "{{ target_home }}/.local/share/plasma/desktoptheme/Graphite-nord-light"
+  register: graphite_initial_install
+- name: Update AquaMediumIcons tabbox style
+  ansible.builtin.git:
+    repo: "{{ profile_defaults.theme_repositories.aqua }}"
+    dest: "{{ target_home }}/.local/share/kwin/tabbox/AquaMediumIcons"
+    clone: true
+    update: true
+    version: "HEAD"
+    force: false
+- name: Check if Tela Circle Icon theme is installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.local/share/icons/Tela-circle"
+  register: tela_icon_installed
+- name: Update Tela Circle icon theme source
+  ansible.builtin.git:
+    repo: "{{ profile_defaults.theme_repositories.tela }}"
+    dest: "{{ target_home }}/.local/share/proarch/themes/tela"
+    clone: true
+    update: true
+    version: "HEAD"
+    force: false
+  notify: Update installed Tela Circle icon theme
+- name: Install Tela Circle Icon theme.
+  when: not tela_icon_installed.stat.exists and not ansible_check_mode
+  ansible.builtin.command:
+    argv:
+      - ./install.sh
+    chdir: "{{ target_home }}/.local/share/proarch/themes/tela"
+    creates: "{{ target_home }}/.local/share/icons/Tela-circle"
+  register: tela_initial_install

@@ -1,0 +1,43 @@
+---
+- name: Configure Omarchy personal overrides as their owner
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+    XDG_CONFIG_HOME: "{{ target_home }}/.config"
+    XDG_STATE_HOME: "{{ target_home }}/.local/state"
+    XDG_RUNTIME_DIR: "/run/user/{{ target_uid }}"
+    DBUS_SESSION_BUS_ADDRESS: "unix:path=/run/user/{{ target_uid }}/bus"
+    OMARCHY_PATH: /usr/share/omarchy
+  block:
+    - name: Ensure personal Omarchy directories exist
+      ansible.builtin.file:
+        path: "{{ target_home }}/.config/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - hypr
+        - omarchy/plugins
+        - omarchy/extensions
+        - omarchy/hooks
+        - fontconfig/conf.d
+
+    - name: Install pinned user-owned plugins
+      ansible.builtin.include_tasks: plugins.yml
+
+    - name: Configure the Omarchy input method integration
+      ansible.builtin.include_tasks: input_method.yml
+      when: features.input_method
+
+    - name: Deploy personal Hyprland overrides
+      ansible.builtin.include_tasks: hyprland.yml
+
+    - name: Keep application themes independent of the desktop
+      ansible.builtin.include_tasks: app_themes.yml
+      when: omarchy_settings.independent_app_themes
+
+    - name: Deploy Shell preferences
+      ansible.builtin.include_tasks: shell.yml
+
+    - name: Deploy optional custom menus and hooks
+      ansible.builtin.include_tasks: extensions.yml

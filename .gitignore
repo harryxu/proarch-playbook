@@ -1,9 +1,8 @@
 *.vagrant
 *.retry
 roles*
-config.yml
+/config.yml
 inventory/work.yml
-extras.yml
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,windows,linux,vim,visualstudiocode
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,windows,linux,vim,visualstudiocode

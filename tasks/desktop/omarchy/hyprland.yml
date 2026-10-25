@@ -1,0 +1,25 @@
+---
+- name: Copy personal bindings and window appearance
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/hypr/{{ item }}"
+    dest: "{{ target_home }}/.config/hypr/{{ item }}"
+    mode: '0644'
+    backup: true
+  loop: [bindings.lua, looknfeel.lua]
+  notify: Reload Hyprland
+
+- name: Configure machine-specific displays
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/omarchy/monitors.lua.j2"
+    dest: "{{ target_home }}/.config/hypr/monitors.lua"
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland
+
+- name: Configure plugin-dependent autostart
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/omarchy/autostart.lua.j2"
+    dest: "{{ target_home }}/.config/hypr/autostart.lua"
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland

@@ -1,9 +1,8 @@
 ---
 - name: Configure Btrfs snapshots with Snapper
   vars:
-    snapper_config_name: "root"
-    snapper_config_path: "/etc/snapper/configs/{{ snapper_config_name }}"
-
+    snapper_config_name: root
+    snapper_config_path: /etc/snapper/configs/{{ snapper_config_name }}
   block:
     - name: 1. Install Snapper, snap-pac, and grub-btrfs
       community.general.pacman:
@@ -13,32 +12,26 @@
           - grub-btrfs
           - inotify-tools
         state: present
-        update_cache: true
-
     - name: 2. Create Snapper config for the root subvolume
-      command: "snapper -c {{ snapper_config_name }} create-config /"
+      ansible.builtin.command: snapper -c {{ snapper_config_name }} create-config /
       args:
         creates: "{{ snapper_config_path }}"
-
     - name: 3. Ensure timeline snapshots are enabled in the root config
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ snapper_config_path }}"
-        regexp: "^TIMELINE_CREATE="
-        line: 'TIMELINE_CREATE="yes"'
+        regexp: ^TIMELINE_CREATE=
+        line: TIMELINE_CREATE="yes"
         state: present
-
     - name: 4. Enable and start the grub-btrfsd service
-      systemd_service:
+      ansible.builtin.systemd_service:
         name: grub-btrfsd.service
         enabled: true
         state: started
-
     - name: 5. Enable and start snapper-timeline.timer
       ansible.builtin.systemd:
         name: snapper-timeline.timer
         enabled: true
         state: started
-
     - name: 6. Enable and start snapper-cleanup.timer
       ansible.builtin.systemd:
         name: snapper-cleanup.timer

@@ -1,7 +1,12 @@
 ---
-- name: Create cliphist systemd user service
+- name: Require the explicit KDE clipboard integration
+  ansible.builtin.assert:
+    that: desktop_profile == 'kde'
+    fail_msg: Omarchy manages its own clipboard watchers.
+
+- name: Install the standalone clipboard user unit
   ansible.builtin.copy:
-    dest: "/home/{{ ansible_user }}/.config/systemd/user/cliphist.service"
+    dest: "{{ target_home }}/.config/systemd/user/cliphist.service"
     content: |
       [Unit]
       Description=Cliphist Watch Service
@@ -16,20 +21,14 @@
 
       [Install]
       WantedBy=graphical-session.target
-    mode: "0644"
-    force: true
-  become: false
+    owner: "{{ target_user }}"
+    mode: '0644'
+    backup: true
+  notify: Reload user systemd units
+  register: cliphist_unit
 
-- name: Reload user systemd daemon
-  ansible.builtin.systemd:
-    daemon_reload: yes
-    scope: user
-  become: false
-
-- name: Enable and start cliphist user service
-  ansible.builtin.systemd:
-    name: cliphist.service
-    enabled: yes
-    state: started
-    scope: user
-  become: false
+- name: Enable the standalone clipboard integration
+  ansible.builtin.include_tasks: common/user_service.yml
+  vars:
+    user_service: cliphist.service
+    user_service_restart: "{{ cliphist_unit.changed }}"

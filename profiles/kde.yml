@@ -1,0 +1,20 @@
+---
+# Desktop defaults; host configuration can override these explicitly.
+features:
+  cliphist: true
+  vicinae: true
+packages:
+  - ttf-jetbrains-mono-nerd
+  - rofi
+  - cliphist
+  - wl-clipboard
+aur_packages:
+  - herdr-bin
+dotconfig_paths:
+  - rofi
+  - cliphist
+  - xremap
+theme_repositories:
+  graphite: https://github.com/vinceliuice/Graphite-kde-theme.git
+  aqua: https://github.com/harryxu/kde-aquamediumicons.git
+  tela: https://github.com/vinceliuice/Tela-circle-icon-theme.git

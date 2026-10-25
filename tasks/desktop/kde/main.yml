@@ -1,0 +1,23 @@
+---
+- name: Require the KDE profile for KDE tasks
+  ansible.builtin.assert:
+    that: desktop_profile == 'kde'
+
+- name: Configure KDE preferences and SDDM theme files
+  ansible.builtin.import_tasks: config.yml
+
+- name: Integrate the selected input method with KDE
+  ansible.builtin.import_tasks: input_method.yml
+  when: features.input_method
+
+- name: Configure the selected clipboard integration
+  ansible.builtin.import_tasks: ../../cliphist.yml
+  when: features.cliphist
+
+- name: Configure the selected launcher integration
+  ansible.builtin.import_tasks: ../../vicinae.yml
+  when: features.vicinae
+
+- name: Configure the login manager only when requested
+  ansible.builtin.include_tasks: display_manager.yml
+  when: kde_manage_display_manager

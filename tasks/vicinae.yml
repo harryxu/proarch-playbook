@@ -1,18 +1,18 @@
 ---
-- name: Install vicinae-bin from AUR
+- name: Require the explicit KDE launcher integration
+  ansible.builtin.assert:
+    that: desktop_profile == 'kde'
+    fail_msg: Omarchy uses its integrated launcher.
+
+- name: Install Vicinae from AUR
   kewlfft.aur.aur:
     use: yay
     state: present
-    name:
-      - vicinae-bin
+    name: vicinae-bin
   become: true
   become_user: aur_builder
 
-- name: Enable and start vicinae user service
-  ansible.builtin.systemd:
-    name: vicinae
-    scope: user
-    enabled: true
-    state: started
-    daemon_reload: true
-  become: false
+- name: Enable the launcher integration
+  ansible.builtin.include_tasks: common/user_service.yml
+  vars:
+    user_service: vicinae.service

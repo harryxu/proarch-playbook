@@ -1,0 +1,5 @@
+-- Managed by Proarch. Machine-specific values come from config.yml.
+hl.env("GDK_SCALE", {{ (omarchy_gdk_scale | string) | to_json(ensure_ascii=false) }})
+{% for monitor in omarchy_monitors %}
+hl.monitor({ output = {{ monitor.output | to_json(ensure_ascii=false) }}, mode = {{ monitor.mode | to_json(ensure_ascii=false) }}, position = {{ monitor.position | to_json(ensure_ascii=false) }}, scale = {{ monitor.scale | float }}{% if monitor.transform is defined %}, transform = {{ monitor.transform | int }}{% endif %} })
+{% endfor %}

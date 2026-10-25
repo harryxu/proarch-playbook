@@ -1,0 +1,24 @@
+#!/bin/bash
+set -eu
+
+is_kde() {
+  case ":${XDG_CURRENT_DESKTOP,,}:" in
+    *:kde:*|*:plasma:*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+XDG_CURRENT_DESKTOP=${XDG_CURRENT_DESKTOP:-}
+
+if [[ ${1:-} == --check-desktop ]]; then
+  is_kde
+  exit $?
+fi
+
+if ! is_kde; then
+  echo "xremap is restricted to KDE sessions; skipping startup." >&2
+  exit 0
+fi
+
+exec "$HOME/.local/share/xremap-features/kde/bin/xremap" \
+  "${1:-$HOME/.config/xremap/config.yml}" --watch

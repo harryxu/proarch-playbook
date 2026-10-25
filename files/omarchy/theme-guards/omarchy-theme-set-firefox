@@ -1,0 +1,10 @@
+#!/bin/bash
+set -eu
+
+if [[ -f "$HOME/.local/state/omarchy/toggles/skip-firefox-theme-changes" ]]; then
+  exit 0
+fi
+
+native="${OMARCHY_PATH:-/usr/share/omarchy}/bin/omarchy-theme-set-firefox"
+[[ -x $native ]] || exit 0
+exec "$native" "$@"

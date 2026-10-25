@@ -1,0 +1,15 @@
+[Unit]
+Description=Xremap input remapper for KDE
+Documentation=https://github.com/xremap/xremap
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecCondition=%h/.local/bin/xremap-launcher --check-desktop
+ExecStart=%h/.local/bin/xremap-launcher
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,30 @@
+---
+- name: Resolve selected tracked files
+  ansible.builtin.set_fact:
+    # Decode Git's NUL separator at runtime, keeping YAML/Jinja source printable.
+    dotconfig_files: >-
+      {{ dotconfig_tracked.stdout.split('AA==' | b64decode) | reject('equalto', '') | list }}
+
+- name: Require ordinary relative tracked paths
+  ansible.builtin.assert:
+    that:
+      - not item.startswith('/')
+      - "'..' not in item.split('/')"
+      - "'.git' not in item.split('/')"
+  loop: "{{ dotconfig_files }}"
+
+- name: Create destination parent directories
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ dotconfig_files | map('dirname') | unique | list }}"
+
+- name: Copy tracked shared configuration with per-file backups
+  ansible.builtin.copy:
+    src: "{{ dotconfig_source_dir }}/{{ item }}"
+    dest: "{{ target_home }}/.config/{{ item }}"
+    remote_src: true
+    mode: preserve
+    backup: true
+  loop: "{{ dotconfig_files }}"

@@ -1,0 +1,27 @@
+---
+- name: Update plugin sources without discarding local edits
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ target_home }}/.config/omarchy/plugins/{{ item.id }}"
+    version: "{{ item.version | default('HEAD') }}"
+    update: true
+    force: false
+  loop: "{{ omarchy_settings.plugins }}"
+  loop_control:
+    label: "{{ item.id }}"
+  notify: Rescan Omarchy plugins
+
+- name: Read deployed plugin manifests
+  ansible.builtin.slurp:
+    src: "{{ target_home }}/.config/omarchy/plugins/{{ item.id }}/manifest.json"
+  loop: "{{ omarchy_settings.plugins }}"
+  register: plugin_manifests
+  when: not ansible_check_mode
+
+- name: Verify that each plugin's ID matches its installation directory
+  ansible.builtin.assert:
+    that: (item.content | b64decode | from_json).id == item.item.id
+  loop: "{{ plugin_manifests.results }}"
+  loop_control:
+    label: "{{ item.item.id }}"
+  when: not ansible_check_mode

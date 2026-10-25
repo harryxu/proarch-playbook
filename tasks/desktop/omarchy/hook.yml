@@ -1,0 +1,19 @@
+---
+- name: Validate the custom hook destination
+  ansible.builtin.assert:
+    that:
+      - omarchy_hook.event in ['battery-low', 'font-set', 'post-boot', 'post-update', 'pre-refresh-pacman', 'theme-set']
+      - omarchy_hook.name is match('^[A-Za-z0-9][A-Za-z0-9_.-]*$')
+
+- name: Create the selected event hook directory
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/omarchy/hooks/{{ omarchy_hook.event }}.d"
+    state: directory
+    mode: '0755'
+
+- name: Copy a maintained hook with its executable mode
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/hooks/{{ omarchy_hook.name }}"
+    dest: "{{ target_home }}/.config/omarchy/hooks/{{ omarchy_hook.event }}.d/{{ omarchy_hook.name }}"
+    mode: '0755'
+    backup: true

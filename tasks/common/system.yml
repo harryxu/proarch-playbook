@@ -1,0 +1,74 @@
+---
+- name: Load shared package choices
+  ansible.builtin.include_vars: "{{ playbook_dir }}/vars/packages.yml"
+
+- name: Ensure the locale exists
+  community.general.locale_gen:
+    name: en_US.UTF-8
+    state: present
+
+- name: Configure the system timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Install shared and selected desktop packages
+  community.general.pacman:
+    name: >-
+      {{ (common_packages + profile_defaults.packages + extra_packages
+          + (['docker', 'docker-buildx', 'docker-compose'] if features.docker else []))
+          | unique | list }}
+    state: present
+
+- name: Prepare the AUR builder
+  ansible.builtin.import_tasks: ../setup_aur.yml
+
+- name: Install shared AUR applications
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: "{{ (common_aur_packages + profile_defaults.aur_packages + extra_aur_packages) | unique | list }}"
+  become: true
+  become_user: aur_builder
+
+- name: Ensure personal configuration directories exist
+  ansible.builtin.file:
+    path: "{{ target_home }}/{{ item }}"
+    state: directory
+    owner: "{{ target_user }}"
+    mode: '0755'
+  loop:
+    - .config
+    - .config/fish/conf.d
+    - .config/systemd/user
+    - .local/share/applications
+    - .local/share/proarch
+    - .local/bin
+
+- name: Set fish as the user's shell
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    shell: /usr/bin/fish
+
+- name: Supply the default browser for fish without replacing personal choices
+  ansible.builtin.copy:
+    dest: "{{ target_home }}/.config/fish/conf.d/custom.fish"
+    content: |
+      # Default browser for applications launched from fish.
+      set -gx BROWSER 'google-chrome-stable'
+    owner: "{{ target_user }}"
+    mode: '0644'
+    force: false
+
+- name: Enable shared system services
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop: "{{ (['sshd'] if features.sshd else []) + (['docker'] if features.docker else []) }}"
+
+- name: Add the desktop user to the Docker group
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    groups: docker
+    append: true
+  when: features.docker

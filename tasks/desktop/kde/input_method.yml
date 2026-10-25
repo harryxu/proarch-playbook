@@ -1,0 +1,27 @@
+---
+- name: Preserve the X11 input method environment
+  ansible.builtin.blockinfile:
+    path: "{{ target_home }}/.xprofile"
+    create: true
+    block: |
+      export GTK_IM_MODULE=fcitx
+      export QT_IM_MODULE=fcitx
+      export XMODIFIERS="@im=fcitx"
+    owner: "{{ target_user }}"
+    mode: '0644'
+    backup: true
+
+- name: Use KDE's native Wayland input method integration
+  community.general.kdeconfig:
+    kwriteconfig_path: /usr/bin/kwriteconfig6
+    path: "{{ target_home }}/.config/kwinrc"
+    values:
+      - group: Wayland
+        key: InputMethod[$e]
+        value: /usr/share/applications/org.fcitx.Fcitx5.desktop
+    backup: true
+  become: true
+  become_user: "{{ target_user }}"
+
+- name: Retire only the old playbook-owned duplicate autostart
+  ansible.builtin.import_tasks: ../../common/legacy_input_autostart.yml

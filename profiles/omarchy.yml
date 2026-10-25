@@ -1,0 +1,27 @@
+---
+# Desktop defaults; host configuration can override these explicitly.
+features: {}
+packages:
+  - ttf-jetbrains-mono-nerd-basic
+  - herdr
+aur_packages: []
+dotconfig_paths: []
+omarchy:
+  version_pattern: ^4\.5\.
+  font_family: JetBrainsMono Nerd Font
+  shell_font_size: 12
+  screensaver_enabled: false
+  independent_app_themes: true
+  shell:
+    # Manage only these bar/dock fields; preserve all other personal preferences.
+    bar:
+      background: glassy
+    dock:
+      autohide: true
+    idle:
+      lock: 600
+      screensaver: 999999
+    version: 1
+  plugins:
+    - id: harryxu.dropspace
+      repo: https://github.com/harryxu/omarchy-dropspace.git

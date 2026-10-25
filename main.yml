@@ -1,145 +1,46 @@
 ---
-- name: Configure host.
+- name: Configure an Arch Linux development desktop
   hosts: all
-  become: yes
-
+  gather_facts: false
+  become: true
   vars_files:
     - default.config.yml
 
-  roles:
-    - rolehippie.starship
-
   pre_tasks:
-    - name: Ensure the locale exists
-      community.general.locale_gen:
-        name: en_US.UTF-8
-        state: present
+    - name: Resolve and validate configuration before changing the host
+      ansible.builtin.import_tasks: tasks/configuration.yml
+      tags: [always]
 
-    # https://stackoverflow.com/a/26399105/157811
-    - name: get the username running the deploy
-      become: false
-      action: command whoami
-      register: current_username
-
-    - name: Set ansible_user fact
-      ansible.builtin.set_fact:
-        ansible_user: "{{ current_username.stdout }}"
-
-    - name: Include playbook configuration.
-      include_vars: "{{ item }}"
-      with_fileglob:
-        - "{{ playbook_dir }}/config.yml"
-
-    - name: Install required packages on Arch
-      community.general.pacman:
-        update_cache: true
-        name: [
-          'git', 'zip', 'unzip', 'base-devel', 'cmake', 'openssh', 'gnupg', 'curl', 'net-tools',
-          'fish', 'vim', 'neovim', 'tmux', 'zellij', 'lazygit', 'cliphist', 'rofi',
-          'btop', 'fzf', 'bat', 'fd', 'eza', 'ripgrep', 'zoxide',
-
-          # docker
-          'docker', 'docker-buildx', 'docker-compose',
-
-          # dev envs
-          'go', 'nodejs', 'npm', 'rust',
-
-          # apps
-          'zed', 'ghostty', 'vlc', 'flameshot',
-
-          # Fonts
-          'noto-fonts', 'noto-fonts-emoji', 'noto-fonts-extra', 'noto-fonts-cjk', 'inter-font', 'ttf-sarasa-gothic',
-          'ttf-font-awesome', 'ttf-iosevka-nerd', 'ttf-iosevkaterm-nerd', 'ttf-ubuntu-mono-nerd', 'ttf-victor-mono-nerd',
-          'ttf-jetbrains-mono-nerd', 'ttf-jetbrains-mono', 'wqy-zenhei', 'wqy-microhei',
-        ]
-
-        state: present
-
-    - include_tasks: tasks/setup_aur.yml
-
-    - name: Ensure directories exists.
-      become: false
-      file:
-        path: "/home/{{ ansible_user }}/{{ item }}"
-        recurse: yes
-        state: directory
-
-      with_items:
-        - ".config"
-        - ".config/systemd/user"
-        - ".local/share/applications"
-        - ".local/bin"
-
-    - name: Dot config git directory.
-      stat:
-        path: "/home/{{ ansible_user }}/.config/.git"
-      register: dotconfig_git
+    - name: Check the target system and desktop prerequisites
+      ansible.builtin.import_tasks: tasks/preflight.yml
+      tags: [always]
 
   tasks:
-    - name: Ensure required services are started and enabled
-      ansible.builtin.systemd:
-        name: "{{ item }}"
-        enabled: yes
-        state: started
-      loop:
-        - sshd
+    - name: Configure shared packages and system services
+      ansible.builtin.import_tasks: tasks/common/system.yml
+      tags: [common, packages]
 
-    - name: Setup dotconfig
-      become: false
-      command: "{{ item }}"
-      args:
-        chdir: "/home/{{ ansible_user }}/.config"
-      with_items:
-        - "git init"
-        - "git remote add origin https://github.com/harryxu/dotconfig.git"
-        - "git fetch"
-        - "git checkout origin/main -ft"
-      when: not dotconfig_git.stat.exists
+    - name: Deploy shared personal configuration
+      ansible.builtin.import_tasks: tasks/common/dotconfig.yml
+      when: features.dotconfig
+      tags: [common, dotconfig]
 
-    - name: Change user shell to fish
-      user:
-        name: "{{ ansible_user }}"
-        shell: /usr/bin/fish
+    - name: Configure shared input method components
+      ansible.builtin.import_tasks: tasks/common/input_method.yml
+      when: features.input_method
+      tags: [common, input_method]
 
-    - name: Install aur packages.
-      kewlfft.aur.aur:
-        use: yay
-        state: present
-        name: ["google-chrome", "crow-translate", "herdr-bin"]
-      become: true
-      become_user: aur_builder
+    - name: Configure the selected desktop
+      ansible.builtin.include_tasks:
+        file: "tasks/desktop/{{ desktop_profile }}/main.yml"
+        apply:
+          tags: [desktop, "{{ desktop_profile }}"]
+      tags: [desktop, kde, omarchy]
 
-    - name: Set custom environment variables in fish config
-      ansible.builtin.copy:
-        dest: "/home/{{ ansible_user }}/.config/fish/conf.d/custom.fish"
-        content: |
-          # Set the default browser for applications launched from this shell
-          set -gx BROWSER 'google-chrome-stable'
-        mode: "0664"
-        force: false
-      when: dotconfig_git.stat.exists
+    - name: Configure optional features
+      ansible.builtin.import_tasks: tasks/features/main.yml
+      tags: [features]
 
-    - include_tasks: tasks/cliphist.yml
-    - include_tasks: tasks/fcitx5.yml
-    - include_tasks: tasks/vicinae.yml
-
-    - name: Enable and start docker service
-      ansible.builtin.systemd:
-        name: docker
-        enabled: yes
-        state: started
-
-    - name: Add current user to docker group
-      ansible.builtin.user:
-        name: "{{ ansible_user }}"
-        groups: docker
-        append: yes
-
-    - name: Check if extras.yml exists
-      stat:
-        path: "{{ playbook_dir }}/extras.yml"
-      register: extras_file
-
-    - name: Include extras.yml if it exists
-      include_tasks: extras.yml
-      when: extras_file.stat.exists
+  handlers:
+    - name: Load configuration handlers
+      ansible.builtin.import_tasks: handlers/main.yml
