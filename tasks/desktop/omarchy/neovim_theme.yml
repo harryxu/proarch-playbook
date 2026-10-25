@@ -1,0 +1,26 @@
+---
+- name: Inspect the standard Omarchy Neovim theme bridge without following it
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.config/nvim/lua/plugins/theme.lua"
+    follow: false
+  register: omarchy_neovim_theme_bridge
+
+- name: Back up and disconnect only known Omarchy Neovim theme symlinks
+  ansible.builtin.command:
+    argv:
+      - mv
+      - --
+      - "{{ target_home }}/.config/nvim/lua/plugins/theme.lua"
+      - "{{ target_home }}/.config/nvim/lua/plugins/theme.lua.proarch-backup-{{ now(utc=true, fmt='%Y%m%d%H%M%S%f') }}"
+  when:
+    - omarchy_neovim_theme_bridge.stat.islnk | default(false)
+    - >-
+      omarchy_neovim_theme_bridge.stat.lnk_target in [
+        target_home ~ '/.local/state/omarchy/current/theme/neovim.lua',
+        target_home ~ '/.config/omarchy/current/theme/neovim.lua',
+        '../../../../.local/state/omarchy/current/theme/neovim.lua',
+        '../../../../.config/omarchy/current/theme/neovim.lua',
+        '../../../omarchy/current/theme/neovim.lua',
+        '~/.config/omarchy/current/theme/neovim.lua'
+      ]
+  changed_when: true

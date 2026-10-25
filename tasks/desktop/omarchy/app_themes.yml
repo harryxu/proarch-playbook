@@ -1,4 +1,7 @@
 ---
+- name: Disconnect the packaged Neovim theme bridge without choosing an editor theme
+  ansible.builtin.include_tasks: neovim_theme.yml
+
 - name: Prepare user-owned theme protection directories
   ansible.builtin.file:
     path: "{{ target_home }}/{{ item }}"

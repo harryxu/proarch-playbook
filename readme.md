@@ -183,8 +183,8 @@ headless provisioning takes effect on the next login.
 ## Independent application themes
 
 The Omarchy profile defaults to `independent_app_themes: true`. It prevents
-Omarchy's theme switch from retinting VS Code and browsers. Each application's
-selected theme and automatic light/dark preference remain under its own control.
+Omarchy's theme switch from retinting VS Code, browsers and Neovim. Each
+application's selected theme and automatic light/dark preference remain under its own control.
 Ansible does not edit VS Code settings, browser preferences or enterprise policies,
 and does not select a theme or light/dark mode for these applications.
 
@@ -204,6 +204,16 @@ The Chromium retint command is shared by Chrome, Chromium, Edge, and Brave,
 so the guard skips that shared retint step. Firefox has no dedicated retint step
 in this Omarchy version; its guard supports a future matching command.
 
+Neovim's stock Omarchy integration is a `lua/plugins/theme.lua` symlink to
+Omarchy's generated `neovim.lua`. The playbook renames only known current and
+legacy Omarchy links to a backup with a non-`.lua` suffix, so LazyVim stops
+loading them. Broken known links are handled as well. Regular Lua files and
+links to personal themes are preserved. No replacement colorscheme is selected;
+shared Neovim configuration and personal theme choices remain in control.
+The current Omarchy version has no Vim theme-sync step, so Vim configuration is
+left untouched. Custom editor code that explicitly imports Omarchy theme state
+remains user-controlled and must be disconnected in that custom configuration.
+
 Choose themes and light/dark behavior inside each application. If an application
 is configured to follow the system, that application can still react to the OS
 color preference. Existing settings and previously installed browser policies
@@ -211,7 +221,8 @@ are left untouched; this feature prevents future Omarchy retints, rather than
 undoing past changes. Packaged Omarchy files are never patched.
 
 `independent_app_themes: false` stops managing this feature; like other optional
-features, it does not remove previously deployed opt-out flags or guards.
+features, it does not remove previously deployed opt-out flags or guards,
+or restore a disconnected Neovim theme link.
 
 ## Layout and checks
 

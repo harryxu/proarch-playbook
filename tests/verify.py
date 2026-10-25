@@ -211,6 +211,18 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
 '''
     code_settings.write_text(original_code)
     code_settings.chmod(0o600)
+    nvim_theme = app_home / '.config/nvim/lua/plugins/theme.lua'
+    nvim_theme.parent.mkdir(parents=True)
+    generated_nvim = app_home / '.local/state/omarchy/current/theme/neovim.lua'
+    generated_nvim.parent.mkdir(parents=True)
+    generated_nvim.write_text('return { system_theme = "old" }\n')
+    bridge_target = '../../../../.local/state/omarchy/current/theme/neovim.lua'
+    nvim_theme.symlink_to(bridge_target)
+    personal_nvim = nvim_theme.with_name('colorscheme.lua')
+    personal_nvim.write_text('return { { "LazyVim/LazyVim", opts = { colorscheme = "nordfox" } } }\n')
+    vimrc = app_home / '.vimrc'
+    vimrc.write_text('colorscheme desert\n')
+    editor_originals = {path: path.read_bytes() for path in [personal_nvim, vimrc]}
     (app_home / '.bash_profile').write_text('export KEEP_ME=yes\n')
     chrome_policy = policy_root / 'etc/opt/chrome/policies/managed/color.json'
     chrome_policy.parent.mkdir(parents=True)
@@ -242,6 +254,11 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
                                          'omarchy_overrides': overrides or {}})])
 
     configure_app_themes()
+    assert not nvim_theme.is_symlink() and not nvim_theme.exists()
+    bridge_backups = list(nvim_theme.parent.glob('theme.lua.proarch-backup-*'))
+    assert len(bridge_backups) == 1 and bridge_backups[0].readlink() == Path(bridge_target)
+    assert generated_nvim.read_text() == 'return { system_theme = "old" }\n'
+    assert all(path.read_bytes() == content for path, content in editor_originals.items())
     assert code_settings.read_text() == original_code
     assert code_settings.stat().st_mode & 0o777 == 0o600
     assert not list(code_settings.parent.glob('settings.json.*'))
@@ -273,6 +290,10 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
             assert result.returncode == 0, result.stderr
     assert not native_marker.exists(), 'Browser retint guard delegated while disabled'
     assert before_retint == [code_settings.read_bytes(), chrome_policy.read_bytes(), firefox_policy.read_bytes()]
+    # Omarchy may keep generating theme state; disconnected editors ignore it.
+    generated_nvim.write_text('return { system_theme = "new" }\n')
+    assert not nvim_theme.exists()
+    assert all(path.read_bytes() == content for path, content in editor_originals.items())
     # A wrapper delegates to the packaged entry point when its flag is removed.
     browser_flag = app_home / '.local/state/omarchy/toggles/skip-browser-theme-changes'
     browser_flag.unlink()
@@ -326,11 +347,52 @@ esac
     assert chrome_policy.read_bytes() == original_chrome
     assert firefox_policy.read_bytes() == original_firefox
     # Users may change their application theme; redeployment must leave it alone.
+    # A user-created regular theme file is retained on later deployments.
+    custom_nvim = 'return { { "LazyVim/LazyVim", opts = { colorscheme = "user-theme" } } }\n'
+    nvim_theme.write_text(custom_nvim)
     custom_code = original_code.replace('Light+', 'User-selected dark theme')
     code_settings.write_text(custom_code)
     stable_apps = configure_app_themes()
     assert re.search(r'changed=0\b', stable_apps), stable_apps
     assert code_settings.read_text() == custom_code
+    assert nvim_theme.read_text() == custom_nvim
+    assert all(path.read_bytes() == content for path, content in editor_originals.items())
+
+    # Test broken legacy links and unrelated personal links with the real tasks.
+    link_cases = [
+        ('legacy', '../../../omarchy/current/theme/neovim.lua', True),
+        ('legacy-home', '~/.config/omarchy/current/theme/neovim.lua', True),
+        ('absolute', str(app_home / '.local/state/omarchy/current/theme/neovim.lua'), True),
+        ('personal', 'personal-theme.lua', False),
+    ]
+    fixture_homes = []
+    for label, target, remove in link_cases:
+        fixture_home = work / ('editor-' + label)
+        link = fixture_home / '.config/nvim/lua/plugins/theme.lua'
+        link.parent.mkdir(parents=True)
+        # Absolute targets belong to their own fixture home.
+        if label == 'absolute':
+            target = str(fixture_home / '.local/state/omarchy/current/theme/neovim.lua')
+        link.symlink_to(target)
+        fixture_homes.append(str(fixture_home))
+    bridge_play = work / 'editor-bridges.yml'
+    bridge_play.write_text(json.dumps([{
+        'name': 'Verify known and personal editor bridges',
+        'hosts': 'all', 'gather_facts': False, 'become': False,
+        'tasks': [{'ansible.builtin.include_tasks': str(ROOT / 'tasks/desktop/omarchy/neovim_theme.yml'),
+                   'loop': fixture_homes, 'vars': {'target_home': '{{ item }}'}}],
+    }]))
+    bridge_cmd = ['ansible-playbook', str(bridge_play), '-i', 'localhost,', '-c', 'local']
+    command(bridge_cmd)
+    for (label, target, remove), fixture_home in zip(link_cases, fixture_homes):
+        link = Path(fixture_home) / '.config/nvim/lua/plugins/theme.lua'
+        assert link.is_symlink() != remove, label
+        backups = list(link.parent.glob('theme.lua.proarch-backup-*'))
+        assert len(backups) == int(remove), label
+        if not remove:
+            assert str(link.readlink()) == target
+    assert re.search(r'changed=0\b', command(bridge_cmd))
+
 
     # Real KDE sync tasks against a local upstream; installer stubs stay inside /tmp.
     upstream = work / 'theme-upstream'
@@ -442,5 +504,5 @@ printf x >> "$destination/installs"
     print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      latest KDE sources, source-change installation and stable reruns,')
     print('      default-latest Omarchy plugin clone/update and stable reruns,')
-    print('      Omarchy retint opt-outs, untouched app settings/policies and browser guards,')
+    print('      Omarchy retint opt-outs, Neovim bridge backups, preserved Vim/editor themes,')
     print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')
