@@ -42,12 +42,13 @@
       - omarchy_monitors | length > 0
       - omarchy_settings.plugins | map(attribute='id') | unique | list | length == omarchy_settings.plugins | length
 
-- name: Validate plugin sources and pinned revisions
+- name: Validate plugin sources and optional Git references
   ansible.builtin.assert:
     that:
       - item.id is match('^[A-Za-z0-9][A-Za-z0-9_.-]*$')
       - item.repo is match('^https://')
-      - item.version is match('^[0-9a-f]{40}$')
+      - item.version | default('HEAD') is string
+      - item.version | default('HEAD') | trim | length > 0
   loop: "{{ omarchy_settings.plugins }}"
   loop_control:
     label: "{{ item.id }}"

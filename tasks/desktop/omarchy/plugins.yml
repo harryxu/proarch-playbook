@@ -1,9 +1,10 @@
 ---
-- name: Check out pinned plugin sources without discarding local edits
+- name: Update plugin sources without discarding local edits
   ansible.builtin.git:
     repo: "{{ item.repo }}"
     dest: "{{ target_home }}/.config/omarchy/plugins/{{ item.id }}"
-    version: "{{ item.version }}"
+    version: "{{ item.version | default('HEAD') }}"
+    update: true
     force: false
   loop: "{{ omarchy_settings.plugins }}"
   loop_control:

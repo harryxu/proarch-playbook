@@ -138,14 +138,15 @@ The maintained configuration includes:
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
 - Nord theme selection, Shell font size 12, and a monospace fontconfig preference.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
-- Pinned user-owned plugins, with the obsolete `dropspace` activation entry removed.
+- User-owned plugins following latest upstream code, with the obsolete `dropspace` activation entry removed.
 
-| Plugin | Source | Pinned commit |
+| Plugin | Source | Default version |
 | --- | --- | --- |
-| `harryxu.dropspace` | https://github.com/harryxu/omarchy-dropspace | `4ca53457a12f6f48e21c83cc46d01808fbd43095` |
+| `harryxu.dropspace` | https://github.com/harryxu/omarchy-dropspace | `HEAD` |
 
 `omarchy_overrides.plugins` replaces the complete plugin list; each entry
-requires `id`, `repo` (HTTPS), and `version` (full commit). Optional `settings`
+requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`;
+an explicit branch, tag, or commit can still be selected when needed. Optional `settings`
 are merged into that plugin's Shell activation entry. Local uncommitted plugin
 edits are preserved: Git refuses to overwrite them. Removing an entry disables
 its activation without deleting its source directory.
@@ -206,11 +207,24 @@ With Ansible, Git, Python, the required collections, and Lua's `luac` installed:
 ```sh
 ansible-playbook main.yml --syntax-check -e desktop_profile=kde
 ansible-playbook main.yml --syntax-check -e desktop_profile=omarchy
+ansible-lint --offline
 python3 tests/verify.py
 ```
 
 The integration checks use disposable local Git repositories and homes under
 `/tmp`. They cover required selection, both profiles, override precedence,
 invalid settings, actual allowlisted copies and backups, untouched desktop
-files and existing Git metadata, second-run idempotence, and Lua parsing.
+files and existing Git metadata, second-run idempotence, latest KDE theme
+updates without duplicate installation, and Lua parsing.
 They do not install packages, start services, or alter live configuration.
+
+Install `ansible-lint` separately to run lint checks. `.ansible-lint.yml` adds
+file classifications for the examples. Its project-wide `skip_list` contains
+only `latest[git]`, allowing Git tasks to follow upstream without inline
+exceptions. Other lint rules remain enabled.
+All Git checkouts synchronize the latest upstream code by default, including
+shared dotconfig and Omarchy plugins. Explicit version overrides remain supported.
+KDE theme repositories synchronize upstream `HEAD` on each run. Graphite and
+Tela are installed on first use and reinstalled when their source changes;
+AquaMediumIcons runs directly from its updated checkout.
+Unchanged sources do not trigger reinstallation, and local Git edits are preserved.

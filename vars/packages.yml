@@ -1,50 +1,51 @@
+---
 common_packages:
-- git
-- zip
-- unzip
-- base-devel
-- cmake
-- openssh
-- gnupg
-- curl
-- net-tools
-- fish
-- vim
-- neovim
-- tmux
-- lazygit
-- btop
-- fzf
-- bat
-- fd
-- eza
-- ripgrep
-- zoxide
-- go
-- nodejs
-- npm
-- rust
-- zed
-- ghostty
-- vlc
-- flameshot
-- noto-fonts
-- noto-fonts-emoji
-- noto-fonts-extra
-- noto-fonts-cjk
-- inter-font
-- ttf-sarasa-gothic
-- ttf-font-awesome
-- ttf-iosevka-nerd
-- ttf-iosevkaterm-nerd
-- ttf-ubuntu-mono-nerd
-- ttf-victor-mono-nerd
-- ttf-jetbrains-mono-nerd
-- ttf-jetbrains-mono
-- wqy-zenhei
-- wqy-microhei
-- starship
+  - git
+  - zip
+  - unzip
+  - base-devel
+  - cmake
+  - openssh
+  - gnupg
+  - curl
+  - net-tools
+  - fish
+  - vim
+  - neovim
+  - tmux
+  - lazygit
+  - btop
+  - fzf
+  - bat
+  - fd
+  - eza
+  - ripgrep
+  - zoxide
+  - go
+  - nodejs
+  - npm
+  - rust
+  - zed
+  - ghostty
+  - vlc
+  - flameshot
+  - noto-fonts
+  - noto-fonts-emoji
+  - noto-fonts-extra
+  - noto-fonts-cjk
+  - inter-font
+  - ttf-sarasa-gothic
+  - ttf-font-awesome
+  - ttf-iosevka-nerd
+  - ttf-iosevkaterm-nerd
+  - ttf-ubuntu-mono-nerd
+  - ttf-victor-mono-nerd
+  - ttf-jetbrains-mono-nerd
+  - ttf-jetbrains-mono
+  - wqy-zenhei
+  - wqy-microhei
+  - starship
 common_aur_packages:
-- google-chrome
-- crow-translate
-- herdr-bin
+  - google-chrome
+  - crow-translate
+  - herdr-bin

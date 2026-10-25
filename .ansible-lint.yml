@@ -1,0 +1,10 @@
+---
+# Git checkouts intentionally follow the latest upstream code by default.
+skip_list:
+  - latest[git]
+
+# Treat the example files as their actual Ansible content types.
+kinds:
+  - tasks: "**/extras.yml.example"
+  - vars: "**/config.yml.example"
+  - inventory: "**/inventory/*.yml.example"

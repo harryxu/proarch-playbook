@@ -1,7 +1,9 @@
 ---
 - name: Resolve selected tracked files
   ansible.builtin.set_fact:
-    dotconfig_files: "{{ dotconfig_tracked.stdout.split('\u0000') | reject('equalto', '') | list }}"
+    # Decode Git's NUL separator at runtime, keeping YAML/Jinja source printable.
+    dotconfig_files: >-
+      {{ dotconfig_tracked.stdout.split('AA==' | b64decode) | reject('equalto', '') | list }}
 
 - name: Require ordinary relative tracked paths
   ansible.builtin.assert:
@@ -15,7 +17,7 @@
   ansible.builtin.file:
     path: "{{ target_home }}/.config/{{ item }}"
     state: directory
-    mode: '0755'
+    mode: "0755"
   loop: "{{ dotconfig_files | map('dirname') | unique | list }}"
 
 - name: Copy tracked shared configuration with per-file backups

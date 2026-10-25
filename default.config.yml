@@ -22,7 +22,7 @@ extra_aur_packages: []
 omarchy_overrides: {}
 
 dotconfig_repo: https://github.com/harryxu/dotconfig.git
-dotconfig_version: main
+dotconfig_version: HEAD
 dotconfig_source_dir: "{{ target_home }}/.local/share/proarch/dotconfig"
 # Only tracked files below these paths are deployed. Existing files are backed up.
 dotconfig_paths:

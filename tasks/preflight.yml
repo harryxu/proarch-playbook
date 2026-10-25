@@ -44,7 +44,9 @@
   register: user_bus
 
 - name: Check whether a graphical session is active
-  ansible.builtin.command: systemctl --user is-active graphical-session.target
+  ansible.builtin.systemd_service:
+    name: graphical-session.target
+    scope: user
   become: true
   become_user: "{{ target_user }}"
   environment:
@@ -58,9 +60,9 @@
 
 - name: Resolve session capabilities
   ansible.builtin.set_fact:
-    has_graphical_session: "{{ graphical_session.rc | default(1) == 0 }}"
+    has_graphical_session: "{{ graphical_session.status.ActiveState | default('inactive') == 'active' }}"
     has_hyprland_session: >-
-      {{ graphical_session.rc | default(1) == 0
+      {{ graphical_session.status.ActiveState | default('inactive') == 'active'
          and (ansible_facts.env.HYPRLAND_INSTANCE_SIGNATURE | default('') | length > 0)
          and connection_username.stdout == target_user }}
 

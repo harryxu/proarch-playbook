@@ -1,13 +1,14 @@
+---
 - name: Bluetooth driver.
   block:
-  - name: 1. Install Bluetooth packages.
-    community.general.pacman:
-      name:
-      - bluez
-      - bluez-utils
-      state: present
-  - name: 2. Enable and start the bluetooth service
-    systemd_service:
-      name: bluetooth.service
-      enabled: true
-      state: started
+    - name: 1. Install Bluetooth packages.
+      community.general.pacman:
+        name:
+          - bluez
+          - bluez-utils
+        state: present
+    - name: 2. Enable and start the bluetooth service
+      ansible.builtin.systemd_service:
+        name: bluetooth.service
+        enabled: true
+        state: started

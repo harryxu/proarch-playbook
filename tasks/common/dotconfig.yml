@@ -26,6 +26,7 @@
         repo: "{{ dotconfig_repo }}"
         dest: "{{ dotconfig_source_dir }}"
         version: "{{ dotconfig_version }}"
+        update: true
         force: false
 
     - name: Check whether the source checkout is available
