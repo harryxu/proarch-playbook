@@ -73,6 +73,3 @@ omarchy:
   - id: harryxu.dropspace
     repo: https://github.com/harryxu/omarchy-dropspace.git
     version: 4ca53457a12f6f48e21c83cc46d01808fbd43095
-  - id: io.github.matt-aaz.quick-capture
-    repo: https://github.com/Matt-aaz/omarchy-quick-capture.git
-    version: 9822a7200a047d389705b81cef12c37e90e0849a

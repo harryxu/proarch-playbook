@@ -143,7 +143,6 @@ The maintained configuration includes:
 | Plugin | Source | Pinned commit |
 | --- | --- | --- |
 | `harryxu.dropspace` | https://github.com/harryxu/omarchy-dropspace | `4ca53457a12f6f48e21c83cc46d01808fbd43095` |
-| `io.github.matt-aaz.quick-capture` | https://github.com/Matt-aaz/omarchy-quick-capture | `9822a7200a047d389705b81cef12c37e90e0849a` |
 
 `omarchy_overrides.plugins` replaces the complete plugin list; each entry
 requires `id`, `repo` (HTTPS), and `version` (full commit). Optional `settings`
