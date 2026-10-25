@@ -43,3 +43,12 @@ o.bind("SUPER + SHIFT + TAB", "Reveal active window on top", hl.dsp.window.bring
 -- Use Ctrl+Space to switch input language.
 hl.unbind("SUPER + I")
 o.rebind("CTRL + SPACE", "Switch input language", "omarchy-input-method cycle")
+
+-- Replace Super+S with Ctrl+S in the focused application.
+-- Match Omarchy's explicit down/up forwarding to avoid stuck synthetic keys.
+o.rebind("SUPER + S", "Save", function()
+  hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "S", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "S", state = "up" }))
+  end, { timeout = 50, type = "oneshot" })
+end)
