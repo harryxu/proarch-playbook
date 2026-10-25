@@ -1,123 +1,73 @@
-- name: Configure xremap keybindings
-  block:
-  - name: Create local directories
-    become: true
-    file:
-      path: '{{ target_home }}/{{ item }}'
-      recurse: true
-      state: directory
-    with_items:
+---
+- name: Require KDE before installing or configuring xremap
+  ansible.builtin.assert:
+    that: desktop_profile | default('') == 'kde'
+    fail_msg: xremap requires the KDE desktop profile.
+
+- name: Create KDE xremap directories
+  ansible.builtin.file:
+    path: "{{ target_home }}/{{ item }}"
+    state: directory
+    owner: "{{ target_user }}"
+    mode: '0755'
+  loop:
     - .local/share/xremap-features/kde
-    become_user: '{{ target_user }}'
-    environment:
-      HOME: '{{ target_home }}'
-  - name: Install xremap Rust packages
-    become: true
-    community.general.cargo:
-      name: xremap
-      path: '{{ target_home }}/.local/share/xremap-features/{{ item }}'
-      features:
-      - '{{ item }}'
-    loop:
-    - kde
-    become_user: '{{ target_user }}'
-    environment:
-      HOME: '{{ target_home }}'
-  - name: Add the target user to the 'input' group
-    ansible.builtin.user:
-      name: '{{ target_user }}'
-      groups: input
-      append: true
-  - name: Ensure uinput kernel module is configured to load on boot
-    ansible.builtin.copy:
-      dest: /etc/modules-load.d/uinput.conf
-      content: 'uinput
+    - .local/bin
+    - .config/systemd/user
 
-        '
-      owner: root
-      group: root
-      mode: '0644'
-  - name: Create udev rule to grant access to uinput for logged-in users
-    ansible.builtin.copy:
-      dest: /etc/udev/rules.d/99-input-for-xremap.rules
-      content: 'KERNEL=="uinput", GROUP="input", TAG+="uaccess"
+- name: Install xremap with KDE support only
+  community.general.cargo:
+    name: xremap
+    path: "{{ target_home }}/.local/share/xremap-features/kde"
+    features: [kde]
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
 
-        '
-      owner: root
-      group: root
-      mode: '0644'
-  - name: Create the smart launcher script
-    become: true
-    ansible.builtin.copy:
-      dest: '{{ target_home }}/.local/bin/xremap-launcher'
-      mode: '0755'
-      content: "#!/bin/bash\n# Managed by Ansible\n\nCONFIG_PATH=\"$1\"\nif [ -z \"\
-        $CONFIG_PATH\" ]; then\n    CONFIG_PATH=\"$HOME/.config/xremap/config.yml\"\
-        \nfi\n\nDESKTOP_ENV=\"${XDG_CURRENT_DESKTOP,,}\"\necho \"Launcher detected\
-        \ Desktop Environment: $XDG_CURRENT_DESKTOP\"\n\nif [[ \"$DESKTOP_ENV\" ==\
-        \ *\"gnome\"* ]]; then\n    BIN_DIR=\"gnome\"\nelif [[ \"$DESKTOP_ENV\" ==\
-        \ *\"kde\"* ]] || [[ \"$DESKTOP_ENV\" == *\"plasma\"* ]]; then\n    BIN_DIR=\"\
-        kde\"\nelif [[ \"$DESKTOP_ENV\" == *\"cosmic\"* ]]; then\n    BIN_DIR=\"cosmic\"\
-        \nelse\n    echo \"Warning: Unknown environment $XDG_CURRENT_DESKTOP, defaulting\
-        \ to generic xremap if available or failing.\"\n    # Here you can choose\
-        \ to fallback to a specific version or exit with an error\n    exit 1\nfi\n\
-        \nEXECUTABLE=\"$HOME/.local/share/xremap-features/$BIN_DIR/bin/xremap\"\n\n\
-        # Check if the binary file exists\nif [ ! -f \"$EXECUTABLE\" ]; then\n   \
-        \ echo \"Error: Binary $EXECUTABLE not found.\"\n    exit 1\nfi\n\necho \"\
-        Starting xremap with config $CONFIG_PATH\"\nexec \"$EXECUTABLE\" \"$CONFIG_PATH\"\
-        \ --watch\n"
-    become_user: '{{ target_user }}'
-    environment:
-      HOME: '{{ target_home }}'
-  - name: Create the xremap systemd user service
-    become: true
-    ansible.builtin.copy:
-      dest: '{{ target_home }}/.config/systemd/user/xremap.service'
-      mode: '0644'
-      content: '[Unit]
+- name: Add the KDE user to the input group
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    groups: input
+    append: true
 
-        Description=Xremap input remapper (Multi-DE support)
+- name: Load uinput on boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/uinput.conf
+    content: "uinput\n"
+    owner: root
+    group: root
+    mode: '0644'
 
-        Documentation=https://github.com/xremap/xremap
+- name: Grant input-device access to logged-in users
+  ansible.builtin.copy:
+    dest: /etc/udev/rules.d/99-input-for-xremap.rules
+    content: |
+      KERNEL=="uinput", GROUP="input", TAG+="uaccess"
+    owner: root
+    group: root
+    mode: '0644'
 
+- name: Install the KDE-only launcher
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/kde/xremap-launcher"
+    dest: "{{ target_home }}/.local/bin/xremap-launcher"
+    owner: "{{ target_user }}"
+    mode: '0755'
+    backup: true
+  register: xremap_launcher
 
-        # Wait for graphical session to be ready
+- name: Install the KDE-only session unit
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/kde/xremap.service"
+    dest: "{{ target_home }}/.config/systemd/user/xremap.service"
+    owner: "{{ target_user }}"
+    mode: '0644'
+    backup: true
+  register: xremap_unit
 
-        After=graphical-session.target
-
-        Wants=graphical-session.target
-
-
-        [Service]
-
-        Type=simple
-
-        KillMode=process
-
-        # Pass environment variables to script to identify desktop environment
-
-        PassEnvironment=DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP
-
-
-        # Point to our smart script and pass the config file path as an argument
-
-        ExecStart={{ target_home }}/.local/bin/xremap-launcher {{ target_home }}/.config/xremap/config.yml
-
-
-        Restart=always
-
-        RestartSec=5
-
-
-        [Install]
-
-        WantedBy=graphical-session.target
-
-        '
-    become_user: '{{ target_user }}'
-    environment:
-      HOME: '{{ target_home }}'
-  - name: Enable the KDE input remapping service
-    ansible.builtin.include_tasks: common/user_service.yml
-    vars:
-      user_service: xremap.service
+- name: Enable the KDE input remapping service
+  ansible.builtin.include_tasks: common/user_service.yml
+  vars:
+    user_service: xremap.service
+    user_service_restart: "{{ xremap_launcher.changed or xremap_unit.changed }}"

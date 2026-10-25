@@ -7,7 +7,7 @@ feature_overrides:
   docker: true
   bluetooth: false
   snapper: false
-  keybindings: false
+  keybindings: false # xremap; KDE only
 
 # Machine-specific display settings.
 omarchy_gdk_scale: 2

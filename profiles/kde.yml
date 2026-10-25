@@ -11,3 +11,4 @@ aur_packages: []
 dotconfig_paths:
 - rofi
 - cliphist
+- xremap

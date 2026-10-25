@@ -18,4 +18,6 @@
     file: ../extra_keybindings.yml
     apply:
       tags: [features]
-  when: features.keybindings
+  when:
+    - features.keybindings
+    - desktop_profile == 'kde'

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Exercise configuration gates and real dotconfig copies in temporary homes."""
+import configparser
 import json
 import os
 from pathlib import Path
 import re
+import shlex
+import shutil
 import subprocess
 import tempfile
 
@@ -42,6 +45,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
       when: verify_dotconfig | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/user_service.yml') + """
       when: verify_user_service | default(false)
+    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/extra_keybindings.yml') + """
+      when: verify_xremap_entry | default(false)
     - ansible.builtin.template:
         src: """ + str(ROOT / 'templates/omarchy/monitors.lua.j2') + """
         dest: "{{ render_file }}"
@@ -57,11 +62,12 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
                 result_file=str(work / 'result.json'), render_file=str(work / 'monitors.lua'),
                 autostart_file=str(work / 'autostart.lua'))
 
-    def run(overrides, success=True):
+    def run(overrides, success=True, check=False):
         variables = work / 'vars.json'
         variables.write_text(json.dumps(base | overrides))
         result = subprocess.run(['ansible-playbook', str(harness), '-i', 'localhost,',
-                                 '-c', 'local', '-e', '@' + str(variables)],
+                                 '-c', 'local', '-e', '@' + str(variables)]
+                                + (['--check'] if check else []),
                                 cwd=ROOT, env=ENV, text=True, capture_output=True)
         if (result.returncode == 0) != success:
             raise AssertionError(result.stdout + result.stderr)
@@ -93,13 +99,20 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     assert data['omarchy']['shell']['idle']['lock'] == 42
     assert data['omarchy']['shell']['bar']['layout']['right'] == []
     assert data['omarchy']['shell']['bar']['layout']['left'], 'Nested defaults were lost'
-    for overrides in [{'docker': 'false'}, {'unknown_feature': True}, {'cliphist': True}]:
+    for overrides in [{'docker': 'false'}, {'unknown_feature': True},
+                      {'cliphist': True}, {'keybindings': True}]:
         run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
+    run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
+    assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True
+    output = run(dict(desktop_profile='omarchy', verify_xremap_entry=True),
+                 success=False, check=True)
+    assert 'xremap requires the KDE desktop profile.' in output
 
     # A real local Git source and a disposable existing home: backups, allowlist, idempotence.
     source = work / 'source'
     for name, text in {'nvim/init.lua': 'return {}\n', 'git/config': '[core]\n  editor = nvim\n',
-                       'omarchy/shell.json': 'must not deploy\n'}.items():
+                       'omarchy/shell.json': 'must not deploy\n',
+                       'xremap/config.yml': 'modmap: []\n'}.items():
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
@@ -115,17 +128,51 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     (home / '.git').mkdir()
     (home / '.git/sentinel').write_text('existing repository\n')
     deploy = dict(desktop_profile='omarchy', verify_dotconfig=True,
-                  dotconfig_repo=str(source), dotconfig_source_dir=str(work / 'checkout'),
-                  dotconfig_paths=['nvim', 'git'])
+                  dotconfig_repo=str(source), dotconfig_source_dir=str(work / 'checkout'))
     run(deploy)
     assert (home / 'nvim/init.lua').read_text() == 'return {}\n'
     backups = list((home / 'nvim').glob('init.lua.*~'))
     assert len(backups) == 1 and backups[0].read_text() == 'personal previous content\n'
     assert (home / 'omarchy/shell.json').read_text() == 'desktop sentinel\n'
     assert (home / '.git/sentinel').read_text() == 'existing repository\n'
+    assert not (home / 'xremap/config.yml').exists(), 'Omarchy deployed KDE configuration'
     second = run(deploy)
     assert re.search(r'changed=0\b', second), second
     assert len(list((home / 'nvim').glob('init.lua.*~'))) == 1
+    run(deploy | {'desktop_profile': 'kde'})
+    assert (home / 'xremap/config.yml').read_text() == 'modmap: []\n'
+
+    # Exercise both the real service condition and direct startup with a harmless backend.
+    launcher = work / 'home/.local/bin/xremap-launcher'
+    launcher.parent.mkdir(parents=True)
+    shutil.copyfile(ROOT / 'files/kde/xremap-launcher', launcher)
+    launcher.chmod(0o755)
+    backend = work / 'home/.local/share/xremap-features/kde/bin/xremap'
+    backend.parent.mkdir(parents=True)
+    backend.write_text('#!/bin/bash\nprintf "%s\\n" "$@" > "$XREMAP_TEST_MARKER"\n')
+    backend.chmod(0o755)
+    unit = configparser.ConfigParser(interpolation=None)
+    unit.read(ROOT / 'files/kde/xremap.service')
+    unit_commands = {
+        key: shlex.split(unit['Service'][key].replace('%h', str(work / 'home')))
+        for key in ['ExecCondition', 'ExecStart']
+    }
+    marker = work / 'xremap-invocations'
+    for desktop in ['KDE', 'plasma', 'KDE:PLASMA', 'Hyprland', 'GNOME', 'COSMIC', '', 'notkde']:
+        allowed = desktop in ['KDE', 'plasma', 'KDE:PLASMA']
+        session_env = ENV | {'HOME': str(work / 'home'), 'XDG_CURRENT_DESKTOP': desktop,
+                             'XREMAP_TEST_MARKER': str(marker)}
+        marker.unlink(missing_ok=True)
+        condition = subprocess.run(unit_commands['ExecCondition'], env=session_env,
+                                   text=True, capture_output=True)
+        assert condition.returncode == (0 if allowed else 1), (desktop, condition.stderr)
+        assert not marker.exists(), 'ExecCondition started xremap'
+        startup = subprocess.run(unit_commands['ExecStart'], env=session_env,
+                                 text=True, capture_output=True)
+        assert startup.returncode == 0, (desktop, startup.stderr)
+        assert marker.exists() == allowed, f'xremap startup guard failed for {desktop!r}'
+        if allowed:
+            assert marker.read_text().splitlines() == [str(home / 'xremap/config.yml'), '--watch']
     # Enabling a user service must also work without a running user bus.
     units = home / 'systemd/user'
     units.mkdir(parents=True)
@@ -144,4 +191,5 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         command(['luac', '-p', str(path)])
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
     print('      real allowlist copies, per-file backups, preserved desktop/repository,')
+    print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')

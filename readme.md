@@ -87,7 +87,7 @@ omarchy_overrides:
 | Standalone cliphist and Vicinae services | Enabled, preserving the old playbook | Disabled; Omarchy supplies these integrations |
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
 | Snapper + GRUB integration | Opt-in | Opt-in only on a compatible Btrfs/GRUB host |
-| Legacy xremap integration | Opt-in | Unsupported; use Hyprland integration |
+| KDE xremap integration | Opt-in | Unsupported; use Hyprland integration |
 
 `false` skips a feature; it does not remove existing packages or undo earlier
 configuration. Before reusing a home previously configured by the old playbook,
@@ -95,6 +95,15 @@ disable its standalone cliphist/Vicinae services if moving to Omarchy. These
 are session migration actions rather than automatic profile cleanup. The old
 playbook-owned Fcitx desktop autostart is recognized and disabled when native
 input integration is configured.
+
+xremap is installed only with `desktop_profile: kde` and
+`feature_overrides.keybindings: true`. Its task entry point also requires KDE,
+including when referenced directly from extras. Its configuration is deployed
+only by the KDE profile. The launcher and systemd `ExecCondition` check the
+current session's `XDG_CURRENT_DESKTOP` for a KDE/Plasma token, so an enabled
+service skips startup in Hyprland, GNOME, other desktops, and headless sessions.
+The service stops with the graphical session; it does not continually restart
+when the desktop condition is unmet.
 
 For multiple hosts, put `desktop_profile`, `target_user`, and host-specific
 overrides in inventory host variables instead of a local `config.yml`.
