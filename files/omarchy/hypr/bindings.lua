@@ -40,6 +40,35 @@ o.bind("SUPER + TAB", "Reveal active window on top", hl.dsp.window.bring_to_top(
 o.rebind("SUPER + SHIFT + TAB", "Focus on previous window", hl.dsp.window.cycle_next({ next = false }))
 o.bind("SUPER + SHIFT + TAB", "Reveal active window on top", hl.dsp.window.bring_to_top())
 
+-- Replace the Quake console shortcuts with macOS-style app window switching.
+local function cycle_app_window(step)
+  local active = hl.get_active_window()
+  if not active or active.class == "" then return end
+
+  local windows = {}
+  for _, window in ipairs(hl.get_windows()) do
+    if window.class == active.class and window.mapped and not window.hidden
+      and window.accepts_input and window.workspace and window.workspace.id >= 0 then
+      windows[#windows + 1] = window
+    end
+  end
+  if #windows < 2 then return end
+
+  -- A stable order allows repeated presses to reach every window.
+  table.sort(windows, function(a, b) return a.stable_id < b.stable_id end)
+  for index, window in ipairs(windows) do
+    if window.address == active.address then
+      local target = windows[(index - 1 + step) % #windows + 1]
+      hl.dispatch(hl.dsp.focus({ window = "address:" .. target.address }))
+      hl.dispatch(hl.dsp.window.bring_to_top())
+      return
+    end
+  end
+end
+
+o.rebind("SUPER + grave", "Next window of current application", function() cycle_app_window(1) end)
+o.rebind("SUPER + SHIFT + grave", "Previous window of current application", function() cycle_app_window(-1) end)
+
 -- Use Ctrl+Space to switch input language.
 hl.unbind("SUPER + I")
 o.rebind("CTRL + SPACE", "Switch input language", "omarchy-input-method cycle")

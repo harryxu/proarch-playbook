@@ -26,6 +26,8 @@ def command(args, **kwargs):
     return result.stdout
 
 
+command(['lua', str(ROOT / 'tests/verify_app_window_cycle.lua')])
+
 with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     work = Path(temporary)
     (work / 'profiles').symlink_to(ROOT / 'profiles', target_is_directory=True)
