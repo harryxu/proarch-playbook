@@ -67,3 +67,6 @@
     dest: "{{ target_home }}/.config/fish/conf.d/proarch-app-themes.fish"
     mode: '0644'
     backup: true
+
+- name: Release Chrome from previously applied Omarchy theme policies
+  ansible.builtin.include_tasks: chrome_theme_policy.yml

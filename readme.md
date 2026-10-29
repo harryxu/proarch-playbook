@@ -188,8 +188,17 @@ headless provisioning takes effect on the next login.
 The Omarchy profile defaults to `independent_app_themes: true`. It prevents
 Omarchy's theme switch from retinting VS Code, browsers and Neovim. Each
 application's selected theme and automatic light/dark preference remain under its own control.
-Ansible does not edit VS Code settings, browser preferences or enterprise policies,
-and does not select a theme or light/dark mode for these applications.
+Ansible does not edit VS Code settings or browser preferences, and does not
+select a theme or light/dark mode for these applications. For Chrome, it backs
+up Omarchy's existing `/etc/opt/chrome/policies/managed/color.json` and removes
+only `BrowserThemeColor` and `BrowserColorScheme`, retaining unrelated keys.
+Backups are stored under `/var/lib/proarch/backups/chrome-theme-policies`,
+not in Chrome's policy directories: Chrome loads all regular files there, even
+Ansible backup files ending in `~`. Existing `color.json.*~` and
+`color.json.proarch-backup-*` backups are moved to that external backup directory.
+These mandatory entries otherwise keep Chrome's theme locked even after future
+Omarchy retints are blocked. No policy file is created when it is absent.
+Restart Chrome or reload its policies at `chrome://policy` after deployment.
 
 ```yaml
 omarchy_overrides:
@@ -218,9 +227,8 @@ remains user-controlled and must be disconnected in that custom configuration.
 
 Choose themes and light/dark behavior inside each application. If an application
 is configured to follow the system, that application can still react to the OS
-color preference. Existing settings and previously installed browser policies
-are left untouched; this feature prevents future Omarchy retints, rather than
-undoing past changes. Packaged Omarchy files are never patched.
+color preference. Existing application settings and unrelated browser policies
+are retained. Packaged Omarchy files are never patched.
 
 `independent_app_themes: false` stops managing this feature; like other optional
 features, it does not remove previously deployed opt-out flags or guards,

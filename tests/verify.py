@@ -275,7 +275,7 @@ end
     for path in (ROOT / 'files/omarchy/hypr').glob('*.lua'):
         command(['luac', '-p', str(path)])
 
-    # Deploy only Omarchy opt-outs; application files must remain byte-for-byte intact.
+    # Deploy Omarchy opt-outs and release only legacy forced Chrome theme policies.
     app_home = work / 'app-home'
     policy_root = work / 'browser-policy-root'
     code_settings = app_home / '.config/Code/User/settings.json'
@@ -312,6 +312,8 @@ end
     firefox_policy.write_text(json.dumps({'policies': {'DisableTelemetry': True,
                                          'Preferences': {'browser.tabs.warnOnClose': False}}}))
     original_chrome = chrome_policy.read_bytes()
+    old_chrome_backup = chrome_policy.with_name('color.json.previous~')
+    old_chrome_backup.write_bytes(original_chrome)
     original_firefox = firefox_policy.read_bytes()
     app_play = work / 'apps.yml'
     app_play.write_text(json.dumps([{
@@ -344,7 +346,18 @@ end
     assert 'export KEEP_ME=yes' in (app_home / '.bash_profile').read_text()
     assert not (app_home / '.config/Code - Insiders').exists()
     assert not (app_home / '.mozilla').exists(), 'Created a Firefox profile unnecessarily'
-    assert chrome_policy.read_bytes() == original_chrome
+    assert json.loads(chrome_policy.read_text()) == {'BrowserSignin': 0}
+    chrome_backup_dir = policy_root / 'var/lib/proarch/backups/chrome-theme-policies'
+    chrome_backups = list(chrome_backup_dir.glob('color.json.*~'))
+    assert len(chrome_backups) == 2
+    assert all(path.read_bytes() == original_chrome for path in chrome_backups)
+    assert not old_chrome_backup.exists()
+    # Chrome parses every policy file, including backups without a .json suffix.
+    effective_chrome_policy = {}
+    for policy_file in sorted(chrome_policy.parent.iterdir()):
+        if policy_file.is_file():
+            effective_chrome_policy.update(json.loads(policy_file.read_text()))
+    assert not {'BrowserThemeColor', 'BrowserColorScheme'} & effective_chrome_policy.keys()
     assert firefox_policy.read_bytes() == original_firefox
     stable_apps = configure_app_themes()
     assert re.search(r'changed=0\b', stable_apps), stable_apps
@@ -452,7 +465,7 @@ exit 0
                                   env=app_environment, text=True, capture_output=True, check=True)
         assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser')
     assert code_settings.read_text() == original_code
-    assert chrome_policy.read_bytes() == original_chrome
+    assert json.loads(chrome_policy.read_text()) == {'BrowserSignin': 0}
     assert firefox_policy.read_bytes() == original_firefox
     # Users may change their application theme; redeployment must leave it alone.
     # A user-created regular theme file is retained on later deployments.

@@ -1,0 +1,98 @@
+---
+- name: Release only the forced theme entries in Omarchy's Chrome policy file
+  become: true
+  become_user: root
+  vars:
+    chrome_theme_policy_path: "{{ proarch_policy_root | default('') }}/etc/opt/chrome/policies/managed/color.json"
+    chrome_theme_backup_dir: "{{ proarch_policy_root | default('') }}/var/lib/proarch/backups/chrome-theme-policies"
+  block:
+    - name: Inspect the Chrome managed policy directory
+      ansible.builtin.stat:
+        path: "{{ chrome_theme_policy_path | dirname }}"
+        follow: false
+      register: chrome_policy_directory
+
+    - name: Require a real Chrome managed policy directory when present
+      ansible.builtin.assert:
+        that:
+          - not (chrome_policy_directory.stat.islnk | default(false))
+          - not chrome_policy_directory.stat.exists or (chrome_policy_directory.stat.isdir | default(false))
+
+    - name: Find legacy theme backups which Chrome also loads as active policy
+      ansible.builtin.find:
+        paths: "{{ chrome_theme_policy_path | dirname }}"
+        patterns: ['color.json.*~', 'color.json.proarch-backup-*']
+        file_type: file
+        recurse: false
+      register: chrome_legacy_theme_backups
+      when: chrome_policy_directory.stat.exists
+
+    - name: Retire old backups from the active policy directory
+      when: chrome_legacy_theme_backups.files | default([]) | length > 0
+      block:
+        - name: Prepare the private backup directory outside Chrome's policy tree
+          ansible.builtin.file:
+            path: "{{ chrome_theme_backup_dir }}"
+            state: directory
+            mode: '0700'
+
+        - name: Move legacy backups out of policy loading without overwriting earlier copies
+          ansible.builtin.command:
+            argv: [mv, '--backup=numbered', '--', "{{ item.path }}", "{{ chrome_theme_backup_dir }}/"]
+          loop: "{{ chrome_legacy_theme_backups.files }}"
+          loop_control:
+            label: "{{ item.path | basename }}"
+          changed_when: true
+
+    - name: Inspect the existing Chrome color policy without following symlinks
+      ansible.builtin.stat:
+        path: "{{ chrome_theme_policy_path }}"
+        follow: false
+      register: chrome_theme_policy_file
+
+    - name: Require a regular Chrome color policy file
+      ansible.builtin.assert:
+        that:
+          - not (chrome_theme_policy_file.stat.islnk | default(false))
+          - not chrome_theme_policy_file.stat.exists or (chrome_theme_policy_file.stat.isreg | default(false))
+
+    - name: Remove existing forced theme entries while retaining unrelated policy
+      when: chrome_theme_policy_file.stat.exists
+      block:
+        - name: Read the existing Chrome color policy
+          ansible.builtin.slurp:
+            src: "{{ chrome_theme_policy_path }}"
+          register: chrome_theme_policy_content
+
+        - name: Decode the Chrome color policy
+          ansible.builtin.set_fact:
+            chrome_theme_policy: "{{ chrome_theme_policy_content.content | b64decode | from_json }}"
+
+        - name: Require a Chrome policy object
+          ansible.builtin.assert:
+            that: chrome_theme_policy is mapping
+
+        - name: Back up and remove only the two Omarchy theme policy entries
+          when: "'BrowserThemeColor' in chrome_theme_policy or 'BrowserColorScheme' in chrome_theme_policy"
+          block:
+            - name: Prepare the private theme policy backup directory
+              ansible.builtin.file:
+                path: "{{ chrome_theme_backup_dir }}"
+                state: directory
+                mode: '0700'
+
+            - name: Save the original policy outside Chrome's policy tree
+              ansible.builtin.copy:
+                dest: "{{ chrome_theme_backup_dir }}/color.json.{{ now(utc=true, fmt='%Y%m%d%H%M%S%f') }}~"
+                content: "{{ chrome_theme_policy_content.content | b64decode }}"
+                mode: '0600'
+
+            - name: Remove the forced theme entries without creating an active inline backup
+              ansible.builtin.copy:
+                dest: "{{ chrome_theme_policy_path }}"
+                content: >-
+                  {{ chrome_theme_policy | dict2items
+                     | rejectattr('key', 'in', ['BrowserThemeColor', 'BrowserColorScheme'])
+                     | items2dict | to_nice_json }}
+                mode: '0644'
+                backup: false
