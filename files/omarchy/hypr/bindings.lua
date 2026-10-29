@@ -52,3 +52,11 @@ o.rebind("SUPER + S", "Save", function()
     hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "S", state = "up" }))
   end, { timeout = 50, type = "oneshot" })
 end)
+
+-- Replace Super+W (close window) with Ctrl+W in the focused application.
+o.rebind("SUPER + W", "Close tab", function()
+  hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "W", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "W", state = "up" }))
+  end, { timeout = 50, type = "oneshot" })
+end)
