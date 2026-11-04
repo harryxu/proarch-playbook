@@ -28,7 +28,6 @@ common_packages:
   - zed
   - ghostty
   - vlc
-  - flameshot
   - noto-fonts
   - noto-fonts-emoji
   - noto-fonts-extra

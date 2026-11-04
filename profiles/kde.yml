@@ -4,6 +4,7 @@ features:
   cliphist: true
   vicinae: true
 packages:
+  - flameshot
   - ttf-jetbrains-mono-nerd
   - rofi
   - cliphist

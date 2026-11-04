@@ -24,9 +24,11 @@ o.bind("SUPER + e", "Omarchy menu", "omarchy-menu toggle root")
 -- hl.unbind("SUPER + SHIFT + B")
 
 -- Logitech MX Keys examples:
--- o.bind("SUPER + SHIFT + S", nil, "omarchy-capture-screenshot")
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
+
+-- Replace the audio panel shortcut with Omasnap's smart screenshot picker.
+o.rebind("SUPER + CTRL + A", "Screenshot", "omasnap")
 
 -- DropSpace: Drag and drop window to workspace
 

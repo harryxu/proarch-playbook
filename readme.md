@@ -137,6 +137,9 @@ for a newer Omarchy release.
 The maintained configuration includes:
 
 - Personal bindings, zero window gaps, resize borders, and DropSpace autostart.
+- [Omasnap](https://github.com/omacom/omasnap) screenshots on **Super+Ctrl+A**,
+  replacing the audio panel shortcut. Flameshot is installed only by the KDE
+  profile; existing packages are not automatically removed.
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
 - Shell font size 12 and a monospace fontconfig preference. The system theme is
   selected manually in Omarchy and is never changed by this playbook.

@@ -2,6 +2,7 @@
 # Desktop defaults; host configuration can override these explicitly.
 features: {}
 packages:
+  - omasnap
   - ttf-jetbrains-mono-nerd-basic
   - herdr
 aur_packages: []
