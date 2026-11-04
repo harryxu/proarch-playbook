@@ -26,6 +26,19 @@ desktop_profile: omarchy  # or kde; required
 
 `config.yml` is ignored by Git. The example and shared defaults are committed.
 The playbook stops before system changes if the profile is missing or invalid.
+After editing `config.yml`, you can use the bootstrap script:
+
+```sh
+./start.sh
+```
+
+It installs Ansible through pacman when needed, installs the roles and collections
+declared in `requirements.yml`, checks that `config.yml` exists, then runs
+`ansible-playbook main.yml`. If the config is missing, it prints setup instructions
+and exits. Run the script as your desktop user; it uses sudo only to install
+Ansible. Additional arguments are forwarded to the playbook, for example
+`./start.sh --check --diff`.
+
 An explicit command-line choice also works:
 
 ```sh
