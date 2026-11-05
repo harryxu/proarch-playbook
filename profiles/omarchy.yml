@@ -5,12 +5,19 @@ packages:
   - omasnap
   - ttf-jetbrains-mono-nerd-basic
   - herdr
+  - nwg-look
+  # Dependencies for the dconf module that persists the GTK font preference.
+  - dconf
+  - python-psutil
+  - python-gobject
 aur_packages: []
 dotconfig_paths: []
 omarchy:
   version_pattern: ^4\.5\.
   screensaver_enabled: false
   independent_app_themes: true
+  gtk_font: Noto Sans CJK SC 11
+  fcitx_font: Noto Sans CJK SC 12
   shell:
     # Manage only these bar/dock fields; preserve all other personal preferences.
     bar:

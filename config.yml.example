@@ -38,11 +38,13 @@ omarchy_keyboard_overrides: []
 #     type: pc
 # On a pc host, use type: mac here for an external Apple keyboard.
 
-# Omarchy system fonts, font sizes, and display settings are configured locally
-# on each host; this playbook does not manage them.
+# Omarchy terminal/Shell fonts and display scaling remain local to each host.
+# GTK and Fcitx candidate fonts are restored from these profile preferences.
 
 omarchy_overrides:
   independent_app_themes: true
+  gtk_font: Noto Sans CJK SC 11
+  fcitx_font: Noto Sans CJK SC 12 # Applied only when input_method is enabled.
   shell:
     # Only bar.background and dock.autohide are managed by default.
     # Other bar/dock settings remain user-owned unless explicitly added here.

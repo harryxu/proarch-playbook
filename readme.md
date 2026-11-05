@@ -130,9 +130,10 @@ outside this allowlist and any existing `~/.config/.git` are preserved.
 
 Each path has one owner: shared dotconfig manages application preferences;
 the desktop profile manages its overrides; Omarchy owns packaged defaults
-and generated theme files. Omarchy system fonts, Shell font sizes, monitor
-layouts, and display scaling remain under each host's control and are not
-managed by Ansible. See `docs/adr/0001-configuration-ownership.md`.
+and generated theme files. The Omarchy profile manages the GTK application and
+Fcitx candidate fonts. Terminal/monospace fonts, Shell font sizes, monitor
+layouts, and display scaling remain under each host's control.
+See `docs/adr/0001-configuration-ownership.md`.
 The playbook leaves package updates to normal Arch/Omarchy maintenance and
 does not refresh package databases independently of a full system update.
 
@@ -153,6 +154,14 @@ The maintained configuration includes:
 - The system theme is selected manually in Omarchy and is never changed by
   this playbook.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
+- `nwg-look` for graphical GTK preferences, GTK font `Noto Sans CJK SC 11`,
+  and Fcitx candidate font `Noto Sans CJK SC 12`. Override `gtk_font` and
+  `fcitx_font` under `omarchy_overrides` in `config.yml` for a particular host.
+  Only the font keys are updated; existing GTK settings and Fcitx themes are
+  preserved, with per-file backups before changes. The GTK font is also stored
+  in dconf, as used by `nwg-look`; its module dependencies are installed with
+  the Omarchy profile. Fcitx font changes use the existing reload handler and
+  apply only when the input method feature is enabled.
 - User-owned plugins following latest upstream code, with the obsolete `dropspace` activation entry removed.
 
 | Plugin | Source | Default version |
@@ -171,10 +180,11 @@ edits are preserved: Git refuses to overwrite them. Removing an entry disables
 its activation without deleting its source directory.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required
-personal imports. Configure fonts through Omarchy and displays in the host's
-Hyprland monitor configuration. The playbook leaves existing font preferences,
-Shell font settings, monitor configuration, and display scaling unchanged,
-including values deployed by earlier versions. It does not run `omarchy font set`.
+personal imports. Configure terminal/monospace fonts through Omarchy and displays
+in the host's Hyprland monitor configuration. The playbook leaves existing
+terminal/monospace fonts, Shell font settings, monitor configuration, and display
+scaling unchanged, including values deployed by earlier versions. It does not
+run `omarchy font set`.
 
 Only actual personal overrides are captured. The current menu file is an empty
 example and current Hooks are supplied by Omarchy/owe, so they are left to their

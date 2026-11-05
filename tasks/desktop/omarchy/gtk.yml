@@ -1,0 +1,28 @@
+---
+- name: Ensure the GTK settings directories exist
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - gtk-3.0
+    - gtk-4.0
+
+- name: Restore the GTK font preference used by nwg-look
+  community.general.dconf:
+    key: /org/gnome/desktop/interface/font-name
+    value: "{{ omarchy_settings.gtk_font | to_json }}"
+    state: present
+
+- name: Restore the GTK font in application settings without replacing other preferences
+  community.general.ini_file:
+    path: "{{ target_home }}/.config/{{ item }}/settings.ini"
+    section: Settings
+    option: gtk-font-name
+    value: "{{ omarchy_settings.gtk_font }}"
+    no_extra_spaces: true
+    mode: '0644'
+    backup: true
+  loop:
+    - gtk-3.0
+    - gtk-4.0

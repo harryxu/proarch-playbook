@@ -24,6 +24,9 @@
     - name: Install pinned user-owned plugins
       ansible.builtin.include_tasks: plugins.yml
 
+    - name: Configure the GTK application font
+      ansible.builtin.include_tasks: gtk.yml
+
     - name: Configure the Omarchy input method integration
       ansible.builtin.include_tasks: input_method.yml
       when: features.input_method

@@ -54,6 +54,17 @@
         mode: '0644'
         backup: true
       notify: Reload Fcitx5 configuration
+
+    - name: Restore the candidate window font without replacing the Omarchy theme
+      community.general.ini_file:
+        path: "{{ target_home }}/.config/fcitx5/conf/classicui.conf"
+        section: ''
+        option: Font
+        value: "{{ omarchy_settings.fcitx_font | to_json }}"
+        no_extra_spaces: true
+        mode: '0644'
+        backup: true
+      notify: Reload Fcitx5 configuration
   always:
     - name: Enable the Omarchy-owned session service
       ansible.builtin.include_tasks: ../../common/user_service.yml
