@@ -162,6 +162,10 @@ The maintained configuration includes:
 | Plugin | Source | Default version |
 | --- | --- | --- |
 | `harryxu.dropspace` | https://github.com/harryxu/omarchy-dropspace | `HEAD` |
+| `harryxu.super-switcher` | https://github.com/harryxu/omarchy-super-switcher | `HEAD` |
+
+Super Switcher enables macOS-style application switching with `Super+Tab` and
+`Super+Shift+Tab`. The plugin registers these shortcuts at runtime.
 
 `omarchy_overrides.plugins` replaces the complete plugin list; each entry
 requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`;

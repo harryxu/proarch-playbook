@@ -26,3 +26,5 @@ omarchy:
   plugins:
     - id: harryxu.dropspace
       repo: https://github.com/harryxu/omarchy-dropspace.git
+    - id: harryxu.super-switcher
+      repo: https://github.com/harryxu/omarchy-super-switcher.git
