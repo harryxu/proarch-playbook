@@ -30,6 +30,10 @@ o.bind("SUPER + e", "Omarchy menu", "omarchy-menu toggle root")
 -- Replace the audio panel shortcut with Omasnap's smart screenshot picker.
 o.rebind("SUPER + CTRL + A", "Screenshot", "omasnap")
 
+-- Move the clipboard manager to Super+Shift+V.
+hl.unbind("SUPER + CTRL + V")
+o.bind("SUPER + SHIFT + V", "Clipboard manager", { panel = "omarchy.clipboard" })
+
 -- DropSpace: Drag and drop window to workspace
 
 -- Use Super instead of Alt for window switching.
