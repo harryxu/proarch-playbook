@@ -54,10 +54,6 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/keyboard.yml') + """
       when: verify_keyboard | default(false)
     - ansible.builtin.template:
-        src: """ + str(ROOT / 'templates/omarchy/monitors.lua.j2') + """
-        dest: "{{ render_file }}"
-      when: desktop_profile == 'omarchy'
-    - ansible.builtin.template:
         src: """ + str(ROOT / 'templates/omarchy/autostart.lua.j2') + """
         dest: "{{ autostart_file }}"
       when: desktop_profile == 'omarchy'
@@ -69,7 +65,7 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     user = command(['id', '-un']).strip()
     base = dict(ansible_become=False, playbook_config_file=str(work / 'absent.yml'),
                 target_user=user, target_home=str(work / 'home'),
-                result_file=str(work / 'result.json'), render_file=str(work / 'monitors.lua'),
+                result_file=str(work / 'result.json'),
                 autostart_file=str(work / 'autostart.lua'))
 
     def run(overrides, success=True, check=False):
@@ -272,8 +268,7 @@ end
     run(offline)
     assert (units / 'graphical-session.target.wants/proarch-fixture.service').is_symlink()
     assert re.search(r'changed=0\b', run(offline)), 'Offline service enable is not idempotent'
-    for name in ['monitors.lua', 'autostart.lua']:
-        command(['luac', '-p', str(work / name)])
+    command(['luac', '-p', str(work / 'autostart.lua')])
     for path in (ROOT / 'files/omarchy/hypr').glob('*.lua'):
         command(['luac', '-p', str(path)])
 
@@ -395,9 +390,9 @@ end
                    env=app_environment, check=True)
     assert native_marker.read_text() == 'literal argument\n'
     browser_flag.touch()
-    # Deploying Shell preferences must never query or switch the system theme.
-    # Exercise the real Shell tasks with a fake Omarchy CLI, never the live desktop.
-    (app_home / '.config/fontconfig/conf.d').mkdir(parents=True)
+    # Exercise real desktop tasks with a fake Omarchy CLI, never the live desktop.
+    # Fonts and monitors belong to each host, even when other preferences change.
+    (app_home / '.config/hypr').mkdir(parents=True)
     fake_cli = fake_native / 'bin/omarchy'
     theme_command_marker = work / 'unexpected-theme-command'
     fake_cli.write_text('''#!/bin/bash
@@ -419,7 +414,7 @@ exit 0
     (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
     shell_play = work / 'shell-preferences.yml'
     shell_play.write_text(json.dumps([{
-        'name': 'Verify Shell configuration preserves the system theme',
+        'name': 'Verify desktop configuration preserves host fonts, monitors and theme',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars_files': [str(ROOT / 'default.config.yml')],
         'vars': {'target_home': str(app_home),
@@ -430,6 +425,7 @@ exit 0
                         'THEME_COMMAND_MARKER': str(theme_command_marker),
                         'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']},
         'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/configuration.yml')},
+                  {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/hyprland.yml')},
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/shell.yml')}],
         'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
                      for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
@@ -438,6 +434,23 @@ exit 0
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
                               'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})]
     command(shell_cmd)
+    host_owned_paths = [app_home / relative for relative in [
+        '.config/hypr/monitors.lua',
+        '.config/omarchy/shell.toml',
+        '.config/fontconfig/conf.d/99-proarch-fonts.conf',
+    ]]
+    assert all(not path.exists() for path in host_owned_paths), 'Created host font or monitor settings'
+    personal_desktop = [
+        '-- Personal display configuration\nhl.env("GDK_SCALE", "2")\n'
+        'hl.monitor({ output = "DP-1", mode = "3840x2160@144", position = "0x0", scale = 1.5 })\n',
+        '[font]\nfamily = "User Mono"\nbase-size = 17\n\n[other]\nenabled = true\n',
+        '<?xml version="1.0"?>\n<fontconfig><alias><family>monospace</family>'
+        '<prefer><family>User Mono</family></prefer></alias></fontconfig>\n',
+    ]
+    desktop_originals = dict(zip(host_owned_paths, [text.encode() for text in personal_desktop]))
+    for path, content in desktop_originals.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(content)
     shell_json = app_home / '.config/omarchy/shell.json'
     shell_data = json.loads(shell_json.read_text())
     assert shell_data['bar'] == shell_defaults['bar'] | {'background': 'glassy'}
@@ -447,14 +460,18 @@ exit 0
                          'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}]},
                          'user-option': {'enabled': True}}
     shell_data['dock'] = {'autohide': False, 'pinned': ['user-app'], 'size': 64}
+    shell_data['font'] = {'family': 'User Mono', 'base-size': 17}
     shell_json.write_text(json.dumps(shell_data))
     command(shell_cmd)
     expected_shell = shell_data | {'bar': shell_data['bar'] | {'background': 'glassy'},
                                   'dock': shell_data['dock'] | {'autohide': True}}
     assert json.loads(shell_json.read_text()) == expected_shell
+    assert all(path.read_bytes() == content for path, content in desktop_originals.items())
     deployed_shell = shell_json.read_bytes()
     command(shell_cmd)
     assert shell_json.read_bytes() == deployed_shell, 'Shell preferences changed on a stable rerun'
+    assert all(path.read_bytes() == content for path, content in desktop_originals.items()), \
+        'Desktop deployment overwrote host font or monitor settings'
     assert not theme_command_marker.exists(), 'Shell deployment queried or switched the system theme'
     assert native_marker.read_text() == 'literal argument\n', 'Shell deployment retinted applications'
     # Resolve through login Bash and fish without executing any native retint.
@@ -629,4 +646,5 @@ printf x >> "$destination/installs"
     print('      latest KDE sources, source-change installation and stable reruns,')
     print('      default-latest Omarchy plugin clone/update and stable reruns,')
     print('      Omarchy retint opt-outs, Neovim bridge backups, preserved Vim/editor themes,')
+    print('      host-owned fonts and monitors, preserved personal Shell font preferences,')
     print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')

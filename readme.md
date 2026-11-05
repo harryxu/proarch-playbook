@@ -2,7 +2,7 @@
 
 Configure a personal Arch Linux development environment with an explicitly
 selected **KDE** or **Omarchy** desktop profile. Both profiles share Git,
-Neovim, fish, terminal preferences, development tools, fonts, ordinary
+Neovim, fish, terminal preferences, development tools, font packages, ordinary
 applications, Docker, and SSH. Install the base desktop before running this
 playbook; the Omarchy profile customizes an existing Omarchy installation.
 
@@ -82,12 +82,6 @@ feature_overrides:
   keybindings: false
 extra_packages: []
 extra_aur_packages: []
-omarchy_gdk_scale: 2
-omarchy_monitors:
-  - output: ""
-    mode: preferred
-    position: auto
-    scale: 2
 omarchy_overrides:
   shell:
     idle:
@@ -136,7 +130,9 @@ outside this allowlist and any existing `~/.config/.git` are preserved.
 
 Each path has one owner: shared dotconfig manages application preferences;
 the desktop profile manages its overrides; Omarchy owns packaged defaults
-and generated theme files. See `docs/adr/0001-configuration-ownership.md`.
+and generated theme files. Omarchy system fonts, Shell font sizes, monitor
+layouts, and display scaling remain under each host's control and are not
+managed by Ansible. See `docs/adr/0001-configuration-ownership.md`.
 The playbook leaves package updates to normal Arch/Omarchy maintenance and
 does not refresh package databases independently of a full system update.
 
@@ -154,8 +150,8 @@ The maintained configuration includes:
   replacing the audio panel shortcut. Flameshot is installed only by the KDE
   profile; existing packages are not automatically removed.
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
-- Shell font size 12 and a monospace fontconfig preference. The system theme is
-  selected manually in Omarchy and is never changed by this playbook.
+- The system theme is selected manually in Omarchy and is never changed by
+  this playbook.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
 - User-owned plugins following latest upstream code, with the obsolete `dropspace` activation entry removed.
 
@@ -175,10 +171,10 @@ edits are preserved: Git refuses to overwrite them. Removing an entry disables
 its activation without deleting its source directory.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required
-personal imports. Displays use portable scale 1 defaults; the supplied local
-example uses this machine's scale 2. Theme selection uses Omarchy's headless
-mode to avoid retinting shared app configuration. The playbook does not run
-`omarchy font set`, which would edit shared terminal preferences.
+personal imports. Configure fonts through Omarchy and displays in the host's
+Hyprland monitor configuration. The playbook leaves existing font preferences,
+Shell font settings, monitor configuration, and display scaling unchanged,
+including values deployed by earlier versions. It does not run `omarchy font set`.
 
 Only actual personal overrides are captured. The current menu file is an empty
 example and current Hooks are supplied by Omarchy/owe, so they are left to their
@@ -266,7 +262,7 @@ tasks/common/            packages, services, dotconfig and input components
 tasks/desktop/           desktop-specific preferences and integrations
 tasks/features/          optional legacy integrations
 files/omarchy/           maintained personal files
-templates/omarchy/       host-dependent displays, autostart and fonts
+templates/omarchy/       personal autostart and keyboard integration
 handlers/                change-triggered session updates
 ```
 

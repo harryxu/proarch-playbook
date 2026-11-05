@@ -38,13 +38,8 @@ omarchy_keyboard_overrides: []
 #     type: pc
 # On a pc host, use type: mac here for an external Apple keyboard.
 
-# Machine-specific display settings.
-omarchy_gdk_scale: 2
-omarchy_monitors:
-  - output: ""
-    mode: preferred
-    position: auto
-    scale: 2
+# Omarchy system fonts, font sizes, and display settings are configured locally
+# on each host; this playbook does not manage them.
 
 omarchy_overrides:
   independent_app_themes: true

@@ -45,9 +45,3 @@ keyboard_type: mac
 
 # Omarchy-only device exceptions to the host keyboard type.
 omarchy_keyboard_overrides: []
-omarchy_gdk_scale: 1
-omarchy_monitors:
-  - output: ""
-    mode: preferred
-    position: auto
-    scale: 1

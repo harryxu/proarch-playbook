@@ -20,7 +20,6 @@
         - omarchy/plugins
         - omarchy/extensions
         - omarchy/hooks
-        - fontconfig/conf.d
 
     - name: Install pinned user-owned plugins
       ansible.builtin.include_tasks: plugins.yml

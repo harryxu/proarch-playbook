@@ -33,23 +33,6 @@
     backup: true
   notify: Synchronize Omarchy bar appearance
 
-- name: Set the Shell font size without editing terminal configuration
-  community.general.ini_file:
-    path: "{{ target_home }}/.config/omarchy/shell.toml"
-    section: font
-    option: base-size
-    value: "{{ omarchy_settings.shell_font_size }}"
-    no_extra_spaces: false
-    mode: '0644'
-    backup: true
-
-- name: Configure desktop font preferences separately from shared app files
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/templates/omarchy/fonts.conf.j2"
-    dest: "{{ target_home }}/.config/fontconfig/conf.d/99-proarch-fonts.conf"
-    mode: '0644'
-    backup: true
-
 - name: Query the explicit screensaver preference
   ansible.builtin.command: omarchy-toggle-enabled screensaver-off
   register: screensaver_disabled

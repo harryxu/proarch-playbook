@@ -11,14 +11,6 @@
   loop: [bindings.lua, looknfeel.lua]
   notify: Reload Hyprland
 
-- name: Configure machine-specific displays
-  ansible.builtin.template:
-    src: "{{ playbook_dir }}/templates/omarchy/monitors.lua.j2"
-    dest: "{{ target_home }}/.config/hypr/monitors.lua"
-    mode: '0644'
-    backup: true
-  notify: Reload Hyprland
-
 - name: Configure plugin-dependent autostart
   ansible.builtin.template:
     src: "{{ playbook_dir }}/templates/omarchy/autostart.lua.j2"
