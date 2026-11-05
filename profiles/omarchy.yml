@@ -16,7 +16,7 @@ omarchy:
   version_pattern: ^4\.5\.
   screensaver_enabled: false
   independent_app_themes: true
-  gtk_font: Noto Sans CJK SC 11
+  gtk_font: Noto Sans CJK SC 11 # Shared by GTK and Qt application interfaces.
   fcitx_font: Noto Sans CJK SC 12
   shell:
     # Manage only these bar/dock fields; preserve all other personal preferences.

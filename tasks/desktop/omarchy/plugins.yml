@@ -1,14 +1,25 @@
 ---
-- name: Update plugin sources without discarding local edits
-  ansible.builtin.git:
-    repo: "{{ item.repo }}"
-    dest: "{{ target_home }}/.config/omarchy/plugins/{{ item.id }}"
-    version: "{{ item.version | default('HEAD') }}"
-    update: true
-    force: false
+- name: Check whether each plugin is already installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.config/omarchy/plugins/{{ item.id }}/manifest.json"
+    get_checksum: false
+    get_mime: false
   loop: "{{ omarchy_settings.plugins }}"
   loop_control:
     label: "{{ item.id }}"
+  register: installed_plugins
+
+- name: Install only missing plugin sources
+  ansible.builtin.git:
+    repo: "{{ item.item.repo }}"
+    dest: "{{ target_home }}/.config/omarchy/plugins/{{ item.item.id }}"
+    version: "{{ item.item.version | default('HEAD') }}"
+    update: false
+    force: false
+  loop: "{{ installed_plugins.results }}"
+  loop_control:
+    label: "{{ item.item.id }}"
+  when: not item.stat.exists
   notify: Rescan Omarchy plugins
 
 - name: Read deployed plugin manifests

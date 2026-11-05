@@ -130,7 +130,7 @@ outside this allowlist and any existing `~/.config/.git` are preserved.
 
 Each path has one owner: shared dotconfig manages application preferences;
 the desktop profile manages its overrides; Omarchy owns packaged defaults
-and generated theme files. The Omarchy profile manages the GTK application and
+and generated theme files. The Omarchy profile manages the GTK/Qt application and
 Fcitx candidate fonts. Terminal/monospace fonts, Shell font sizes, monitor
 layouts, and display scaling remain under each host's control.
 See `docs/adr/0001-configuration-ownership.md`.
@@ -154,7 +154,7 @@ The maintained configuration includes:
 - The system theme is selected manually in Omarchy and is never changed by
   this playbook.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
-- `nwg-look` for graphical GTK preferences, GTK font `Noto Sans CJK SC 11`,
+- `nwg-look` for graphical GTK preferences, GTK/Qt font `Noto Sans CJK SC 11`,
   and Fcitx candidate font `Noto Sans CJK SC 12`. Override `gtk_font` and
   `fcitx_font` under `omarchy_overrides` in `config.yml` for a particular host.
   Only the font keys are updated; existing GTK settings and Fcitx themes are
@@ -162,7 +162,13 @@ The maintained configuration includes:
   in dconf, as used by `nwg-look`; its module dependencies are installed with
   the Omarchy profile. Fcitx font changes use the existing reload handler and
   apply only when the input method feature is enabled.
-- User-owned plugins following latest upstream code, with the obsolete `dropspace` activation entry removed.
+- Qt applications use Omarchy's existing `gtk3` platform theme to read the GTK
+  font family and size. The playbook explicitly sets `QT_QPA_PLATFORMTHEME=gtk3`
+  in `~/.config/uwsm/env.d/90-proarch-qt-font`; no separate Qt font value is
+  needed. Log out and back in after deploying the session environment, then
+  reopen applications. Applications that explicitly choose their own font
+  retain that choice.
+- User-owned plugins installed only when missing, with the obsolete `dropspace` activation entry removed.
 
 | Plugin | Source | Default version |
 | --- | --- | --- |
@@ -173,11 +179,14 @@ Super Switcher enables macOS-style application switching with `Super+Tab` and
 `Super+Shift+Tab`. The plugin registers these shortcuts at runtime.
 
 `omarchy_overrides.plugins` replaces the complete plugin list; each entry
-requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`;
-an explicit branch, tag, or commit can still be selected when needed. Optional `settings`
-are merged into that plugin's Shell activation entry. Local uncommitted plugin
-edits are preserved: Git refuses to overwrite them. Removing an entry disables
-its activation without deleting its source directory.
+requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`
+for the initial installation; an explicit branch, tag, or commit can be selected.
+An existing `manifest.json` marks the plugin as installed, so later runs skip
+Git operations entirely, preserving its installed version and local edits.
+Manifest IDs are still validated. Update existing plugins separately; changing
+`version` does not update an installed plugin. Optional `settings` are merged
+into that plugin's Shell activation entry. Removing an entry disables its
+activation without deleting its source directory.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required
 personal imports. Configure terminal/monospace fonts through Omarchy and displays
@@ -303,8 +312,9 @@ Install `ansible-lint` separately to run lint checks. `.ansible-lint.yml` adds
 file classifications for the examples. Its project-wide `skip_list` contains
 only `latest[git]`, allowing Git tasks to follow upstream without inline
 exceptions. Other lint rules remain enabled.
-All Git checkouts synchronize the latest upstream code by default, including
-shared dotconfig and Omarchy plugins. Explicit version overrides remain supported.
+Shared dotconfig and KDE theme Git checkouts synchronize upstream by default.
+Omarchy plugins are cloned only when missing and are left untouched afterward.
+Explicit version overrides remain supported for their initial installation.
 KDE theme repositories synchronize upstream `HEAD` on each run. Graphite and
 Tela are installed on first use and reinstalled when their source changes;
 AquaMediumIcons runs directly from its updated checkout.

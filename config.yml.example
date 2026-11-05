@@ -39,11 +39,11 @@ omarchy_keyboard_overrides: []
 # On a pc host, use type: mac here for an external Apple keyboard.
 
 # Omarchy terminal/Shell fonts and display scaling remain local to each host.
-# GTK and Fcitx candidate fonts are restored from these profile preferences.
+# GTK/Qt application and Fcitx candidate fonts use these profile preferences.
 
 omarchy_overrides:
   independent_app_themes: true
-  gtk_font: Noto Sans CJK SC 11
+  gtk_font: Noto Sans CJK SC 11 # Also used by Qt via the GTK platform theme.
   fcitx_font: Noto Sans CJK SC 12 # Applied only when input_method is enabled.
   shell:
     # Only bar.background and dock.autohide are managed by default.

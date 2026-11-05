@@ -1,0 +1,16 @@
+---
+- name: Ensure the graphical session environment directory exists
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/uwsm/env.d"
+    state: directory
+    mode: '0755'
+
+- name: Use Omarchy's Qt GTK integration for the shared application font
+  ansible.builtin.copy:
+    dest: "{{ target_home }}/.config/uwsm/env.d/90-proarch-qt-font"
+    content: |
+      # Qt 5/6 read gtk-font-name, managed by omarchy_overrides.gtk_font.
+      # Restart applications in a new graphical session after changing this.
+      export QT_QPA_PLATFORMTHEME=gtk3
+    mode: '0644'
+    backup: true

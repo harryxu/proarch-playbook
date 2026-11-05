@@ -598,7 +598,7 @@ printf x >> "$destination/installs"
     plugin_home = work / 'plugin-home'
     plugin_play = work / 'plugin.yml'
     plugin_play.write_text(json.dumps([{
-        'name': 'Verify plugin default latest checkout in a disposable home',
+        'name': 'Verify install-only plugins in a disposable home',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars': {'target_home': str(plugin_home), 'omarchy_settings': {
             'plugins': [{'id': 'fixture.plugin', 'repo': str(upstream)}],
@@ -620,10 +620,24 @@ printf x >> "$destination/installs"
     command(['git', '-C', str(upstream), 'add', 'version.txt'])
     command(['git', '-C', str(upstream), '-c', 'user.name=Fixture', '-c',
              'user.email=fixture@example.invalid', 'commit', '-m', 'Update test plugin'])
-    sync_plugin()
-    assert plugin_file.read_text() == 'plugin latest\n'
+    # Existing clean installations must not update when upstream advances.
     stable_plugin = sync_plugin()
     assert re.search(r'changed=0\b', stable_plugin), stable_plugin
+    assert plugin_file.read_text() == 'one\n'
+    # Preserve the local edits that previously caused the entire play to fail.
+    plugin_file.write_text('personal plugin changes\n')
+    plugin_checkout = plugin_file.parent
+    untracked_plugin_file = plugin_checkout / 'personal.qml'
+    untracked_plugin_file.write_text('// Personal customization\n')
+    plugin_status = command(['git', '-C', str(plugin_checkout), 'status', '--porcelain'])
+    stable_plugin = sync_plugin()
+    assert re.search(r'changed=0\b', stable_plugin), stable_plugin
+    assert plugin_file.read_text() == 'personal plugin changes\n'
+    assert untracked_plugin_file.read_text() == '// Personal customization\n'
+    assert command(['git', '-C', str(plugin_checkout), 'status', '--porcelain']) == plugin_status
+    # A manually installed plugin need not be a Git checkout.
+    (plugin_checkout / '.git').rename(plugin_checkout / '.git.saved')
+    assert re.search(r'changed=0\b', sync_plugin())
     # Also cover migration from a detached, previously pinned checkout.
     graphite_checkout = theme_home / '.local/share/proarch/themes/graphite'
     command(['git', '-C', str(graphite_checkout), 'checkout', '--detach', first_revision])
@@ -644,7 +658,7 @@ printf x >> "$destination/installs"
     print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
     print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      latest KDE sources, source-change installation and stable reruns,')
-    print('      default-latest Omarchy plugin clone/update and stable reruns,')
+    print('      install-only Omarchy plugins, preserved clean/local/manual installs and stable reruns,')
     print('      Omarchy retint opt-outs, Neovim bridge backups, preserved Vim/editor themes,')
     print('      host-owned fonts and monitors, preserved personal Shell font preferences,')
     print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')
