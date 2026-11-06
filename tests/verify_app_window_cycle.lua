@@ -11,6 +11,7 @@ hl = {
   dsp = {
     focus = function(options) return { focus = options.window } end,
     window = {
+      float = noop,
       cycle_next = noop,
       bring_to_top = function() return { raise = true } end,
     },

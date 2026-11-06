@@ -96,6 +96,20 @@ o.rebind("SUPER + W", "Close tab", function()
   end, { timeout = 50, type = "oneshot" })
 end)
 
+-- Move floating/tiling to Alt (Option)+F and use Super+T for a new tab.
+o.bind("ALT + F", "Toggle window floating/tiling", hl.dsp.window.float({ action = "toggle" }))
+o.rebind("SUPER + T", "New tab", function()
+  local active = hl.get_active_window()
+  if not active then return end
+
+  -- Chrome uses Ctrl+T; Ctrl+Shift+T would reopen a closed tab there.
+  local mods = active.class == "com.mitchellh.ghostty" and "CTRL SHIFT" or "CTRL"
+  hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "T", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = mods, key = "T", state = "up" }))
+  end, { timeout = 50, type = "oneshot" })
+end)
+
 -- Forward Super+Z as Ctrl+Z in the focused application.
 o.bind("SUPER + Z", "Undo", function()
   hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "Z", state = "down" }))

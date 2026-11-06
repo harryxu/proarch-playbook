@@ -137,6 +137,9 @@ See `docs/adr/0001-configuration-ownership.md`.
 The playbook leaves package updates to normal Arch/Omarchy maintenance and
 does not refresh package databases independently of a full system update.
 
+To make a MacBook Pro Touch Bar show function keys by default, follow
+[Touch Bar function keys](docs/macbook-touch-bar.md).
+
 ## Captured Omarchy preferences
 
 The profile is based on **Omarchy 4.5.0rc1-1**, using Hyprland Lua and the
