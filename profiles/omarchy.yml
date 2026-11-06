@@ -18,6 +18,12 @@ omarchy:
   independent_app_themes: true
   gtk_font: Noto Sans CJK SC 11 # Shared by GTK and Qt application interfaces.
   fcitx_font: Noto Sans CJK SC 12
+  wallpaper_dir: "{{ target_home }}/Pictures/Wallpapers"
+  wallpapers:
+    - src: /usr/share/omarchy/themes/tokyo-night/backgrounds/0-liftoff.webp
+      name: spacex-liftoff.webp
+    - src: /usr/share/omarchy/themes/starship/backgrounds/2-flight14-dawn.webp
+      name: spacex-flight14-dawn.webp
   shell:
     # Manage only these bar/dock fields; preserve all other personal preferences.
     bar:

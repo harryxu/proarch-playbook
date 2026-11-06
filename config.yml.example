@@ -45,6 +45,14 @@ omarchy_overrides:
   independent_app_themes: true
   gtk_font: Noto Sans CJK SC 11 # Also used by Qt via the GTK platform theme.
   fcitx_font: Noto Sans CJK SC 12 # Applied only when input_method is enabled.
+  # Store the stock Tokyo Night and Starship launch images in this collection.
+  # A theme-set hook links them into each theme's user background selector.
+  # wallpaper_dir: "{{ target_home }}/Pictures/Wallpapers"
+  # wallpapers: [] # Skip copying; existing personal wallpapers are retained.
+  # To replace the complete image list, use absolute source paths on the target:
+  # wallpapers:
+  #   - src: /usr/share/omarchy/themes/tokyo-night/backgrounds/0-liftoff.webp
+  #     name: spacex-liftoff.webp
   shell:
     # Only bar.background and dock.autohide are managed by default.
     # Other bar/dock settings remain user-owned unless explicitly added here.

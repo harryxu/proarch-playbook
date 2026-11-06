@@ -1,0 +1,38 @@
+---
+- name: Ensure the personal wallpaper directory exists
+  ansible.builtin.file:
+    path: "{{ omarchy_settings.wallpaper_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy selected wallpapers from the installed Omarchy themes
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ omarchy_settings.wallpaper_dir }}/{{ item.name }}"
+    remote_src: true
+    mode: '0644'
+    backup: true
+  loop: "{{ omarchy_settings.wallpapers }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Ensure the personal theme hook directory exists
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/omarchy/hooks/theme-set.d"
+    state: directory
+    mode: '0755'
+
+- name: Keep personal wallpapers available after theme changes
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/omarchy/wallpapers-theme-set.sh.j2"
+    dest: "{{ target_home }}/.config/omarchy/hooks/theme-set.d/90-proarch-wallpapers"
+    mode: '0755'
+    backup: true
+
+- name: Add personal wallpapers to the current theme's background selector
+  ansible.builtin.command:
+    argv:
+      - bash
+      - "{{ target_home }}/.config/omarchy/hooks/theme-set.d/90-proarch-wallpapers"
+  register: omarchy_wallpaper_links
+  changed_when: omarchy_wallpaper_links.stdout | length > 0

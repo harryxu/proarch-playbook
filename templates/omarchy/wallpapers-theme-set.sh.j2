@@ -1,0 +1,37 @@
+#!/bin/bash
+# Make the personal collection visible in Omarchy's per-theme background selector.
+set -euo pipefail
+
+theme="${1:-}"
+if [[ -z $theme ]]; then
+  theme_file={{ (target_home ~ '/.local/state/omarchy/current/theme.name') | quote }}
+  [[ -f $theme_file ]] || exit 0
+  theme=$(<"$theme_file")
+fi
+
+if [[ -z $theme || $theme == .* || $theme == */* ]]; then
+  echo "Invalid theme name: $theme" >&2
+  exit 1
+fi
+
+background_dir={{ (target_home ~ '/.config/omarchy/backgrounds') | quote }}/"$theme"
+if [[ ! -d $background_dir ]]; then
+  mkdir -p -- "$background_dir"
+  printf 'Created %s\n' "$background_dir"
+fi
+
+link_background() {
+  local source=$1 destination="$background_dir/$2"
+  if [[ $source -ef $destination ]]; then
+    return
+  fi
+  if [[ -e $destination || -L $destination ]]; then
+    mv -- "$destination" "$destination.proarch-backup-$(date +%s%N)"
+  fi
+  ln -s -- "$source" "$destination"
+  printf 'Linked %s\n' "$destination"
+}
+
+{% for wallpaper in omarchy_settings.wallpapers %}
+link_background {{ (omarchy_settings.wallpaper_dir ~ '/' ~ wallpaper.name) | quote }} {{ wallpaper.name | quote }}
+{% endfor %}

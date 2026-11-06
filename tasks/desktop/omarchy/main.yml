@@ -24,6 +24,10 @@
     - name: Install missing user-owned plugins
       ansible.builtin.include_tasks: plugins.yml
 
+    - name: Copy selected stock wallpapers into the personal collection
+      ansible.builtin.include_tasks: wallpapers.yml
+      when: omarchy_settings.wallpapers | length > 0
+
     - name: Configure the GTK application font
       ansible.builtin.include_tasks: gtk.yml
 

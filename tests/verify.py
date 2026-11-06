@@ -53,6 +53,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
       when: verify_xremap_entry | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/keyboard.yml') + """
       when: verify_keyboard | default(false)
+    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/wallpapers.yml') + """
+      when: verify_wallpapers | default(false)
     - ansible.builtin.template:
         src: """ + str(ROOT / 'templates/omarchy/autostart.lua.j2') + """
         dest: "{{ autostart_file }}"
@@ -92,6 +94,52 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         assert data['features']['rime_ice'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
+
+    # Personal wallpapers must appear in the native per-theme selector, including
+    # after a theme change, without changing Omarchy's generated backgrounds.
+    wallpaper_home = work / 'wallpaper-home'
+    wallpaper_collection = wallpaper_home / 'Pictures' / 'My "wallpapers"'
+    wallpaper_source = work / "source's launch.webp"
+    wallpaper_source.write_bytes(b'wallpaper fixture')
+    wallpaper_name = 'launch image.webp'
+    theme_state = wallpaper_home / '.local/state/omarchy/current/theme.name'
+    theme_state.parent.mkdir(parents=True)
+    theme_state.write_text('fixture-one\n')
+    generated_background = theme_state.parent / 'theme/backgrounds/stock.webp'
+    generated_background.parent.mkdir(parents=True)
+    generated_background.write_bytes(b'Omarchy-owned image')
+    theme_backgrounds = wallpaper_home / '.config/omarchy/backgrounds'
+    first_backgrounds = theme_backgrounds / 'fixture-one'
+    first_backgrounds.mkdir(parents=True)
+    (first_backgrounds / wallpaper_name).write_bytes(b'previous personal image')
+    personal_wallpaper = first_backgrounds / 'personal.webp'
+    personal_wallpaper.write_bytes(b'keep this image')
+    wallpaper_config = dict(
+        desktop_profile='omarchy', verify_wallpapers=True,
+        target_home=str(wallpaper_home), omarchy_overrides={
+            'wallpaper_dir': str(wallpaper_collection),
+            'wallpapers': [{'src': str(wallpaper_source), 'name': wallpaper_name}]})
+    run(wallpaper_config)
+    collection_image = wallpaper_collection / wallpaper_name
+    first_image = first_backgrounds / wallpaper_name
+    assert collection_image.read_bytes() == wallpaper_source.read_bytes()
+    assert first_image.is_symlink() and first_image.resolve() == collection_image
+    backups = list(first_backgrounds.glob(wallpaper_name + '.proarch-backup-*'))
+    assert len(backups) == 1 and backups[0].read_bytes() == b'previous personal image'
+    assert personal_wallpaper.read_bytes() == b'keep this image'
+    assert generated_background.read_bytes() == b'Omarchy-owned image'
+    assert re.search(r'changed=0\b', run(wallpaper_config)), 'Wallpaper setup is not idempotent'
+    wallpaper_hook = wallpaper_home / '.config/omarchy/hooks/theme-set.d/90-proarch-wallpapers'
+    command(['bash', '-n', str(wallpaper_hook)])
+    command(['bash', str(wallpaper_hook), 'fixture-two'])
+    second_image = theme_backgrounds / 'fixture-two' / wallpaper_name
+    assert second_image.is_symlink() and second_image.resolve() == collection_image
+    # Omarchy's selector follows links and only scans files directly in this directory.
+    visible = command(['find', '-L', str(second_image.parent), '-maxdepth', '1', '-type', 'f'])
+    assert str(second_image) in visible.splitlines()
+    assert command(['bash', str(wallpaper_hook), 'fixture-two']) == ''
+    theme_state.write_text('fixture-two\n')
+    assert re.search(r'changed=0\b', run(wallpaper_config))
 
     # Exercise real keyboard deployment and execute its Lua against a fake API.
     keyboard_home = work / 'keyboard-home'
@@ -655,6 +703,7 @@ printf x >> "$destination/installs"
     assert re.search(r'changed=0\b', stable_themes), stable_themes
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
     print('      real allowlist copies, per-file backups, preserved desktop/repository,')
+    print('      native wallpaper selector links, preserved images and stable theme-change hooks,')
     print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
     print('      KDE-only xremap entry, configuration, launcher and service condition,')
     print('      latest KDE sources, source-change installation and stable reruns,')

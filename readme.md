@@ -156,6 +156,10 @@ The maintained configuration includes:
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
 - The system theme is selected manually in Omarchy and is never changed by
   this playbook.
+- SpaceX Starship launch wallpapers from the stock Tokyo Night and Starship
+  themes are stored in `~/Pictures/Wallpapers` and linked into each theme's
+  user backgrounds during setup and after theme changes. See
+  [Omarchy wallpapers](docs/omarchy-wallpapers.md) for usage and configuration.
 - The current `keyboard-us` / Rime profile and nine candidates per page.
 - `nwg-look` for graphical GTK preferences, GTK/Qt font `Noto Sans CJK SC 11`,
   and Fcitx candidate font `Noto Sans CJK SC 12`. Override `gtk_font` and
@@ -199,8 +203,8 @@ scaling unchanged, including values deployed by earlier versions. It does not
 run `omarchy font set`.
 
 Only actual personal overrides are captured. The current menu file is an empty
-example and current Hooks are supplied by Omarchy/owe, so they are left to their
-owners. Add maintained menu JSONC files under `files/omarchy/extensions/`.
+example. The playbook installs its wallpaper hook alongside the existing
+Omarchy/owe hooks. Add maintained menu JSONC files under `files/omarchy/extensions/`.
 Add hook scripts under `files/omarchy/hooks/` and register them, for example:
 
 ```yaml
