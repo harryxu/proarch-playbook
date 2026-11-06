@@ -95,3 +95,11 @@ o.rebind("SUPER + W", "Close tab", function()
     hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "W", state = "up" }))
   end, { timeout = 50, type = "oneshot" })
 end)
+
+-- Forward Super+Z as Ctrl+Z in the focused application.
+o.bind("SUPER + Z", "Undo", function()
+  hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "Z", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "Z", state = "up" }))
+  end, { timeout = 50, type = "oneshot" })
+end)
