@@ -1,0 +1,2 @@
+# Omarchy's udiskie uses UDisks for removable volumes.
+SUBSYSTEM=="block", SUBSYSTEMS=="usb", ENV{ID_FS_TYPE}=="apfs", ENV{UDISKS_MOUNT_OPTIONS_APFS_DEFAULTS}="ro"

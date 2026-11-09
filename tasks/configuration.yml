@@ -23,17 +23,17 @@
       - omarchy_overrides is mapping
       - extra_packages is sequence and extra_packages is not string
       - extra_aur_packages is sequence and extra_aur_packages is not string
-      - feature_overrides.keys() | difference(feature_defaults.keys()) | length == 0
+      # Accept old host configs while hardware detection replaces this switch.
+      - feature_overrides.keys() | difference((feature_defaults.keys() | list) + ['t2_usb_hotplug']) | length == 0
     fail_msg: Overrides must use the documented keys and YAML types.
 
-- name: Resolve shared defaults, desktop defaults and host overrides
+- name: Resolve shared and desktop feature defaults with host overrides
   ansible.builtin.set_fact:
     features: >-
       {{ feature_defaults | combine(profile_defaults.features, recursive=true)
-         | combine(feature_overrides, recursive=true) }}
-    omarchy_settings: >-
-      {{ profile_defaults.omarchy | default({})
-         | combine(omarchy_overrides, recursive=true, list_merge='replace') }}
+         | combine(feature_overrides | dict2items
+                   | rejectattr('key', 'equalto', 't2_usb_hotplug') | items2dict,
+                   recursive=true) }}
 
 - name: Validate the host keyboard type
   ansible.builtin.assert:
@@ -71,9 +71,11 @@
     that:
       - features.values() | reject('boolean') | list | length == 0
       - not features.keybindings or desktop_profile == 'kde'
+      - not features.apfs_automount or desktop_profile == 'omarchy'
       - not features.rime_ice or features.input_method
       - desktop_profile != 'omarchy' or (not features.cliphist and not features.vicinae)
     fail_msg: >-
       Use YAML true/false for feature switches. Legacy xremap supports KDE only.
+      APFS automount uses the Omarchy desktop session.
       Omarchy owns its clipboard and launcher services; do not start the legacy
       cliphist or Vicinae integrations there.

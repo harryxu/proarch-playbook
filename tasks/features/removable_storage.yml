@@ -1,0 +1,84 @@
+---
+- name: Load the APFS filesystem driver for the running kernel
+  community.general.modprobe:
+    name: apfs
+    state: present
+  when: features.apfs_automount
+
+- name: Default USB APFS mounts to read-only in UDisks
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/udev/99-proarch-apfs-readonly.rules"
+    dest: /etc/udev/rules.d/99-proarch-apfs-readonly.rules
+    owner: root
+    group: root
+    mode: '0644'
+  register: apfs_udev_rule
+  when: features.apfs_automount
+
+- name: Detect the Apple T2 chip on the target PCI bus
+  ansible.builtin.command:
+    argv:
+      - udevadm
+      - trigger
+      - --dry-run
+      - --verbose
+      - --subsystem-match=pci
+      - --attr-match=vendor=0x106b
+      - --attr-match=device=0x180[12]
+  register: t2_pci_devices
+  changed_when: false
+  check_mode: false
+
+- name: Find the affected Intel Titan Ridge USB controllers on T2 Macs
+  ansible.builtin.command:
+    argv:
+      - udevadm
+      - trigger
+      - --dry-run
+      - --verbose
+      - --subsystem-match=pci
+      - --attr-match=vendor=0x8086
+      - --attr-match=device=0x15ec
+      - --attr-match=class=0x0c0330
+  register: t2_usb_controllers
+  changed_when: false
+  check_mode: false
+  when: t2_pci_devices.stdout_lines | length > 0
+
+- name: Keep the detected Intel Titan Ridge USB controllers awake
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/udev/99-proarch-t2-usb-hotplug.rules"
+    dest: /etc/udev/rules.d/99-proarch-t2-usb-hotplug.rules
+    owner: root
+    group: root
+    mode: '0644'
+  register: t2_usb_udev_rule
+  when: t2_usb_controllers.stdout_lines | default([]) | length > 0
+
+- name: Reload removable storage udev rules
+  ansible.builtin.command: udevadm control --reload
+  changed_when: true
+  when: apfs_udev_rule is changed or t2_usb_udev_rule is changed
+
+- name: Apply the Titan Ridge power rule to controllers already present
+  when: t2_usb_controllers.stdout_lines | default([]) | length > 0
+  block:
+    - name: Read each matching controller's runtime power setting
+      ansible.builtin.slurp:
+        src: "{{ item }}/power/control"
+      loop: "{{ t2_usb_controllers.stdout_lines }}"
+      register: t2_usb_power
+
+    - name: Reapply the udev rule to each controller that allows runtime suspend
+      ansible.builtin.command:
+        argv:
+          - udevadm
+          - trigger
+          - --action=change
+          - --settle
+          - "{{ item.item }}"
+      loop: "{{ t2_usb_power.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      changed_when: true
+      when: item.content | b64decode | trim != 'on'

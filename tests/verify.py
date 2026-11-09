@@ -42,6 +42,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     - """ + str(ROOT / 'default.config.yml') + """
   tasks:
     - ansible.builtin.import_tasks: """ + str(ROOT / 'tasks/configuration.yml') + """
+    - ansible.builtin.set_fact:
+        target_home: "{{ fixture_target_home }}"
     - ansible.builtin.copy:
         dest: "{{ result_file }}"
         content: "{{ {'profile': desktop_profile, 'features': features, 'omarchy': omarchy_settings, 'extra_packages': extra_packages, 'extra_aur_packages': extra_aur_packages} | to_json }}"
@@ -72,7 +74,9 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
 
     def run(overrides, success=True, check=False):
         variables = work / 'vars.json'
-        variables.write_text(json.dumps(base | overrides))
+        values = base | overrides
+        values['fixture_target_home'] = values.pop('target_home')
+        variables.write_text(json.dumps(values))
         result = subprocess.run(['ansible-playbook', str(harness), '-i', 'localhost,',
                                  '-c', 'local', '-e', '@' + str(variables)]
                                 + (['--check'] if check else []),
@@ -94,6 +98,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         assert data['features']['rime_ice'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
+        assert data['features']['apfs_automount'] is False
+        assert 't2_usb_hotplug' not in data['features']
 
     # Personal wallpapers must appear in the native per-theme selector, including
     # after a theme change, without changing Omarchy's generated backgrounds.
@@ -231,6 +237,13 @@ end
         run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
     run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
     assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True
+    run(dict(desktop_profile='omarchy',
+             feature_overrides={'apfs_automount': True, 't2_usb_hotplug': False}))
+    storage_features = json.loads((work / 'result.json').read_text())['features']
+    assert storage_features['apfs_automount'] and 't2_usb_hotplug' not in storage_features
+    output = run(dict(desktop_profile='kde', feature_overrides={'apfs_automount': True}),
+                 success=False)
+    assert 'APFS automount uses the Omarchy desktop session' in output
     output = run(dict(desktop_profile='omarchy', verify_xremap_entry=True),
                  success=False, check=True)
     assert 'xremap requires the KDE desktop profile.' in output

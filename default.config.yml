@@ -16,10 +16,15 @@ feature_defaults:
   bluetooth: false
   snapper: false
   keybindings: false
+  apfs_automount: false
 feature_overrides: {}
 extra_packages: []
 extra_aur_packages: []
 omarchy_overrides: {}
+# Resolve when used, after preflight has looked up the target user's home.
+omarchy_settings: >-
+  {{ profile_defaults.omarchy | default({})
+     | combine(omarchy_overrides, recursive=true, list_merge='replace') }}
 
 dotconfig_repo: https://github.com/harryxu/dotconfig.git
 dotconfig_version: HEAD

@@ -1,0 +1,2 @@
+# Some Apple Titan Ridge xHCI controllers miss hotplug events in runtime suspend.
+ACTION=="add|bind|change", SUBSYSTEM=="pci", ATTR{vendor}=="0x8086", ATTR{device}=="0x15ec", ATTR{class}=="0x0c0330", TEST=="power/control", ATTR{power/control}="on"

@@ -97,6 +97,8 @@ omarchy_overrides:
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
 | Snapper + GRUB integration | Opt-in | Opt-in only on a compatible Btrfs/GRUB host |
 | KDE xremap integration | Opt-in | Unsupported; use Hyprland integration |
+| USB APFS automount | Unsupported by this playbook | Opt-in, read-only |
+| Intel Titan Ridge USB hotplug workaround on matching T2 Macs | Automatic | Automatic |
 
 `false` skips a feature; it does not remove existing packages or undo earlier
 configuration. Before reusing a home previously configured by the old playbook,
@@ -139,6 +141,35 @@ does not refresh package databases independently of a full system update.
 
 To make a MacBook Pro Touch Bar show function keys by default, follow
 [Touch Bar function keys](docs/macbook-touch-bar.md).
+
+### USB drives
+
+The playbook detects the Apple T2 chip and Intel Titan Ridge xHCI controllers
+(`8086:15ec`) on the target's PCI bus. When both are present, it keeps those
+controllers out of runtime suspend to allow USB hotplug. This can increase idle
+power use. Remove any old `t2_usb_hotplug` entry from `feature_overrides`.
+Hardware detection now controls the workaround.
+
+To explicitly configure read-only APFS mounting on Omarchy, add this option to
+the existing `feature_overrides` in `config.yml`.
+
+```yaml
+feature_overrides:
+  apfs_automount: true
+```
+
+`apfs_automount` uses Omarchy's existing desktop automounter after login.
+It loads the running kernel's APFS module and defaults USB APFS mounts to
+read-only through UDisks. The open-source kernel driver requires an
+unencrypted APFS volume. If the running kernel lacks the module, add
+`linux-apfs-rw-dkms` and the headers for that kernel to `extra_packages`
+and run the full playbook to install them first.
+
+To apply only the removable storage tasks, use the dedicated tag.
+
+```sh
+ansible-playbook main.yml --tags removable_storage
+```
 
 ## Captured Omarchy preferences
 
@@ -286,7 +317,7 @@ tasks/configuration.yml  config loading, merging and selection validation
 tasks/preflight.yml      user, platform and desktop capability checks
 tasks/common/            packages, services, dotconfig and input components
 tasks/desktop/           desktop-specific preferences and integrations
-tasks/features/          optional legacy integrations
+tasks/features/          optional integrations
 files/omarchy/           maintained personal files
 templates/omarchy/       personal autostart and keyboard integration
 handlers/                change-triggered session updates

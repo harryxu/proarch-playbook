@@ -21,3 +21,7 @@
   when:
     - features.keybindings
     - desktop_profile == 'kde'
+
+- name: Configure removable storage integrations
+  ansible.builtin.import_tasks: removable_storage.yml
+  tags: [removable_storage]

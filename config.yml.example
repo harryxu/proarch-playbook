@@ -12,12 +12,15 @@ feature_overrides:
   bluetooth: false
   snapper: false
   keybindings: false # xremap; KDE only
+  apfs_automount: false # Omarchy only; automatically mount USB APFS volumes read-only.
   # Uncomment to override the selected profile's defaults:
   # cliphist: false   # KDE: true; Omarchy: must remain false.
   # vicinae: false    # KDE: true; Omarchy: must remain false.
 
 # Additional software alongside the shared and desktop package lists.
 extra_packages: []     # Official Arch packages, e.g. [jq, tree].
+# For APFS on a kernel without the apfs module, add linux-apfs-rw-dkms and
+# the headers for the kernel you boot. The linux-t2 kernel may include apfs.
 extra_aur_packages: [] # AUR packages, e.g. [visual-studio-code-bin].
 
 # timezone: Asia/Shanghai
