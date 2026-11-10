@@ -227,7 +227,12 @@ into that plugin's Shell activation entry. Removing an entry disables its
 activation without deleting its source directory.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required
-personal imports. Configure terminal/monospace fonts through Omarchy and displays
+personal imports. The playbook deploys its bindings as
+`~/.config/hypr/proarch_bindings.lua` and manages the import at the top of
+`~/.config/hypr/bindings.lua`. Add host-specific bindings below that block and
+use `o.rebind(...)` to replace a shortcut defined by Omarchy or Proarch.
+
+Configure terminal/monospace fonts through Omarchy and displays
 in the host's Hyprland monitor configuration. The playbook leaves existing
 terminal/monospace fonts, Shell font settings, monitor configuration, and display
 scaling unchanged, including values deployed by earlier versions. It does not

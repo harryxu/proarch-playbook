@@ -53,6 +53,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
       when: verify_xremap_entry | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/keyboard.yml') + """
       when: verify_keyboard | default(false)
+    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/hyprland.yml') + """
+      when: verify_hyprland | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/wallpapers.yml') + """
       when: verify_wallpapers | default(false)
     - ansible.builtin.template:
@@ -98,6 +100,57 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         assert data['features']['vicinae'] == (profile == 'kde')
         assert data['features']['apfs_automount'] is False
         assert 't2_usb_hotplug' not in data['features']
+
+    # Deploy the module and load it before user bindings, without overwriting them.
+    bindings_source = (ROOT / 'files/omarchy/hypr/bindings.lua').read_bytes()
+    bindings_loader = (b'-- BEGIN PROARCH BINDINGS\nrequire("hypr.proarch_bindings")\n'
+                       b'-- END PROARCH BINDINGS\n')
+    personal_bindings = b'-- Keep this local shortcut.\no.rebind("SUPER + F", "Local find", "local-find")\n'
+    for name, initial, expected in [
+        ('missing', None, bindings_loader),
+        ('personal', personal_bindings, bindings_loader + personal_bindings),
+    ]:
+        bindings_home = work / f'bindings-{name}'
+        bindings_dir = bindings_home / '.config/hypr'
+        bindings_dir.mkdir(parents=True)
+        local_bindings = bindings_dir / 'bindings.lua'
+        managed_bindings = bindings_dir / 'proarch_bindings.lua'
+        if initial is not None:
+            local_bindings.write_bytes(initial)
+            local_bindings.chmod(0o600)
+        bindings_config = dict(desktop_profile='omarchy', verify_hyprland=True,
+                               target_home=str(bindings_home))
+        run(bindings_config)
+        assert local_bindings.read_bytes() == expected
+        assert managed_bindings.read_bytes() == bindings_source
+        if initial is not None:
+            assert local_bindings.stat().st_mode & 0o777 == 0o600
+            backups = list(bindings_dir.glob('bindings.lua.*~'))
+            assert len(backups) == 1 and backups[0].read_bytes() == initial
+        assert re.search(r'changed=0\b', run(bindings_config)), 'Bindings deployment is not idempotent'
+
+        if name == 'personal':
+            # Refreshing the managed file must preserve subsequent edits, including load order.
+            expected += b'-- Edit after deployment.\n'
+            local_bindings.write_bytes(expected)
+            managed_bindings.write_text('-- Old managed contents.\n')
+            run(bindings_config)
+            assert local_bindings.read_bytes() == expected
+            assert managed_bindings.read_bytes() == bindings_source
+            bindings_runner = work / 'bindings-runner.lua'
+            bindings_runner.write_text('''
+local bindings = {}
+local function bind(key, description)
+  bindings[key] = description
+end
+o = { bind = bind, rebind = bind }
+hl = { unbind = function() end, dsp = { window = { float = function() end } } }
+package.path = arg[1] .. '/.config/?.lua;' .. package.path
+dofile(arg[1] .. '/.config/hypr/bindings.lua')
+assert(bindings['SUPER + R'] == 'Reload browser tab')
+assert(bindings['SUPER + F'] == 'Local find')
+''')
+            command(['lua', str(bindings_runner), str(bindings_home)])
 
     # Personal wallpapers must appear in the native per-theme selector, including
     # after a theme change, without changing Omarchy's generated backgrounds.
@@ -714,6 +767,7 @@ printf x >> "$destination/installs"
     assert re.search(r'changed=0\b', stable_themes), stable_themes
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
     print('      real allowlist copies, per-file backups, preserved desktop/repository,')
+    print('      managed keybinding imports, local precedence, backups and stable reruns,')
     print('      native wallpaper selector links, preserved images and stable theme-change hooks,')
     print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
     print('      KDE-only xremap entry, configuration, launcher and service condition,')

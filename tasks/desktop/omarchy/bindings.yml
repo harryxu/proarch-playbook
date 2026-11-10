@@ -1,0 +1,18 @@
+---
+- name: Deploy the Proarch keybinding module
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/hypr/bindings.lua"
+    dest: "{{ target_home }}/.config/hypr/proarch_bindings.lua"
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland
+
+- name: Load Proarch keybindings before local keybindings
+  ansible.builtin.blockinfile:
+    path: "{{ target_home }}/.config/hypr/bindings.lua"
+    marker: '-- {mark} PROARCH BINDINGS'
+    block: 'require("hypr.proarch_bindings")'
+    insertbefore: BOF
+    create: true
+    backup: true
+  notify: Reload Hyprland

@@ -2,13 +2,15 @@
 - name: Configure keyboard types
   ansible.builtin.import_tasks: keyboard.yml
 
-- name: Copy personal bindings and window appearance
+- name: Configure managed and local keybindings
+  ansible.builtin.import_tasks: bindings.yml
+
+- name: Copy personal window appearance
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/files/omarchy/hypr/{{ item }}"
-    dest: "{{ target_home }}/.config/hypr/{{ item }}"
+    src: "{{ playbook_dir }}/files/omarchy/hypr/looknfeel.lua"
+    dest: "{{ target_home }}/.config/hypr/looknfeel.lua"
     mode: '0644'
     backup: true
-  loop: [bindings.lua, looknfeel.lua]
   notify: Reload Hyprland
 
 - name: Configure plugin-dependent autostart
