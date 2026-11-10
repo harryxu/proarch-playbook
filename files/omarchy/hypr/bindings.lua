@@ -40,6 +40,14 @@ o.bind("SUPER + SHIFT + V", "Clipboard manager", { panel = "omarchy.clipboard" }
 hl.unbind("SUPER + I")
 o.rebind("CTRL + SPACE", "Switch input language", "omarchy-input-method cycle")
 
+-- Replace Super+F (full screen) with Ctrl+F in the focused application.
+o.rebind("SUPER + F", "Find", function()
+  hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "F", state = "down" }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "F", state = "up" }))
+  end, { timeout = 50, type = "oneshot" })
+end)
+
 -- Replace Super+S with Ctrl+S in the focused application.
 -- Match Omarchy's explicit down/up forwarding to avoid stuck synthetic keys.
 o.rebind("SUPER + S", "Save", function()
