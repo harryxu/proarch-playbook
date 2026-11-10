@@ -48,6 +48,31 @@ o.rebind("SUPER + F", "Find", function()
   end, { timeout = 50, type = "oneshot" })
 end)
 
+-- Reload the current tab when a browser window has focus.
+local browser_classes = {
+  ["google-chrome"] = true,
+  ["google-chrome-stable"] = true,
+  ["com.google.chrome"] = true,
+  chromium = true,
+  ["org.chromium.chromium"] = true,
+  firefox = true,
+  ["firefox-esr"] = true,
+  ["org.mozilla.firefox"] = true,
+}
+
+o.bind("SUPER + R", "Reload browser tab", function()
+  local active = hl.get_active_window()
+  if not active or not browser_classes[active.class:lower()] then
+    return { ok = false }
+  end
+
+  local window = "address:" .. active.address
+  hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "R", state = "down", window = window }))
+  hl.timer(function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "R", state = "up", window = window }))
+  end, { timeout = 50, type = "oneshot" })
+end, { auto_consuming = true })
+
 -- Replace Super+S with Ctrl+S in the focused application.
 -- Match Omarchy's explicit down/up forwarding to avoid stuck synthetic keys.
 o.rebind("SUPER + S", "Save", function()
