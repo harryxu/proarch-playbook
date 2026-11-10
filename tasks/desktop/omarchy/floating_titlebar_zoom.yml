@@ -1,0 +1,17 @@
+---
+- name: Deploy floating workspace titlebar zoom
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/hypr/floating_titlebar_zoom.lua"
+    dest: "{{ target_home }}/.config/hypr/floating_titlebar_zoom.lua"
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland
+
+- name: Load floating workspace titlebar zoom after Omarchy defaults
+  ansible.builtin.lineinfile:
+    path: "{{ target_home }}/.config/hypr/hyprland.lua"
+    regexp: '^require\("hypr\.floating_titlebar_zoom"\)$'
+    line: 'require("hypr.floating_titlebar_zoom")'
+    insertafter: EOF
+    backup: true
+  notify: Reload Hyprland

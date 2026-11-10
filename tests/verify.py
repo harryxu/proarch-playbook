@@ -109,6 +109,8 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     workaround_source = (ROOT / 'files/omarchy/hypr/floating_fullscreen_workaround.lua').read_bytes()
     workaround_loader = (b'require("hypr.floating_fullscreen_workaround")'
                          b' -- Temporary fix for Omarchy #16241.\n')
+    zoom_source = (ROOT / 'files/omarchy/hypr/floating_titlebar_zoom.lua').read_bytes()
+    zoom_loader = b'require("hypr.floating_titlebar_zoom")\n'
     hyprland_defaults = b'require("default.hypr.toggles")\n-- Keep this personal configuration.\n'
     for name, initial, expected in [
         ('missing', None, bindings_loader),
@@ -131,14 +133,17 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         run(bindings_config)
         assert local_bindings.read_bytes() == expected
         assert managed_bindings.read_bytes() == bindings_source
-        assert hyprland_entry.read_bytes() == hyprland_defaults + workaround_loader
+        assert hyprland_entry.read_bytes() == hyprland_defaults + workaround_loader + zoom_loader
         assert workaround.read_bytes() == workaround_source
+        zoom = bindings_dir / 'floating_titlebar_zoom.lua'
+        assert zoom.read_bytes() == zoom_source
         command(['luac', '-p', str(workaround)])
+        command(['luac', '-p', str(zoom)])
         entry_backups = list(bindings_dir.glob('hyprland.lua.*~'))
+        expected_backups = {hyprland_defaults + workaround_loader}
         if name == 'missing':
-            assert len(entry_backups) == 1 and entry_backups[0].read_bytes() == hyprland_defaults
-        else:
-            assert not entry_backups, 'Existing workaround loader was rewritten'
+            expected_backups.add(hyprland_defaults)
+        assert {backup.read_bytes() for backup in entry_backups} == expected_backups
         if initial is not None:
             assert local_bindings.stat().st_mode & 0o777 == 0o600
             backups = list(bindings_dir.glob('bindings.lua.*~'))

@@ -181,6 +181,9 @@ for a newer Omarchy release.
 The maintained configuration includes:
 
 - Personal bindings, zero window gaps, resize borders, and DropSpace autostart.
+- On floating workspaces, double-click a titlebar to fit that window to the
+  display's available area, and double-click again to restore its size and
+  position. The maximize button still uses Hyprland's maximize mode.
 - [Omasnap](https://github.com/omacom/omasnap) screenshots on **Super+Ctrl+A**,
   replacing the audio panel shortcut. Flameshot is installed only by the KDE
   profile; existing packages are not automatically removed.

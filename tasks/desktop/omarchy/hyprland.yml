@@ -23,3 +23,6 @@
 
 - name: Work around floating fullscreen window stacking
   ansible.builtin.import_tasks: floating_fullscreen_workaround.yml
+
+- name: Configure titlebar double-click for floating workspaces
+  ansible.builtin.import_tasks: floating_titlebar_zoom.yml
