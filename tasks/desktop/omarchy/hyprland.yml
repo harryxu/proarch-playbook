@@ -20,3 +20,6 @@
     mode: '0644'
     backup: true
   notify: Reload Hyprland
+
+- name: Work around floating fullscreen window stacking
+  ansible.builtin.import_tasks: floating_fullscreen_workaround.yml

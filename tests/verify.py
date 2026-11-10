@@ -106,6 +106,10 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     bindings_loader = (b'-- BEGIN PROARCH BINDINGS\nrequire("hypr.proarch_bindings")\n'
                        b'-- END PROARCH BINDINGS\n')
     personal_bindings = b'-- Keep this local shortcut.\no.rebind("SUPER + F", "Local find", "local-find")\n'
+    workaround_source = (ROOT / 'files/omarchy/hypr/floating_fullscreen_workaround.lua').read_bytes()
+    workaround_loader = (b'require("hypr.floating_fullscreen_workaround")'
+                         b' -- Temporary fix for Omarchy #16241.\n')
+    hyprland_defaults = b'require("default.hypr.toggles")\n-- Keep this personal configuration.\n'
     for name, initial, expected in [
         ('missing', None, bindings_loader),
         ('personal', personal_bindings, bindings_loader + personal_bindings),
@@ -115,6 +119,10 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         bindings_dir.mkdir(parents=True)
         local_bindings = bindings_dir / 'bindings.lua'
         managed_bindings = bindings_dir / 'proarch_bindings.lua'
+        hyprland_entry = bindings_dir / 'hyprland.lua'
+        workaround = bindings_dir / 'floating_fullscreen_workaround.lua'
+        # Cover a fresh host and adoption of the previously installed manual loader.
+        hyprland_entry.write_bytes(hyprland_defaults + (workaround_loader if name == 'personal' else b''))
         if initial is not None:
             local_bindings.write_bytes(initial)
             local_bindings.chmod(0o600)
@@ -123,6 +131,14 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         run(bindings_config)
         assert local_bindings.read_bytes() == expected
         assert managed_bindings.read_bytes() == bindings_source
+        assert hyprland_entry.read_bytes() == hyprland_defaults + workaround_loader
+        assert workaround.read_bytes() == workaround_source
+        command(['luac', '-p', str(workaround)])
+        entry_backups = list(bindings_dir.glob('hyprland.lua.*~'))
+        if name == 'missing':
+            assert len(entry_backups) == 1 and entry_backups[0].read_bytes() == hyprland_defaults
+        else:
+            assert not entry_backups, 'Existing workaround loader was rewritten'
         if initial is not None:
             assert local_bindings.stat().st_mode & 0o777 == 0o600
             backups = list(bindings_dir.glob('bindings.lua.*~'))
@@ -505,6 +521,7 @@ end
     # Exercise real desktop tasks with a fake Omarchy CLI, never the live desktop.
     # Fonts and monitors belong to each host, even when other preferences change.
     (app_home / '.config/hypr').mkdir(parents=True)
+    (app_home / '.config/hypr/hyprland.lua').write_bytes(hyprland_defaults)
     fake_cli = fake_native / 'bin/omarchy'
     theme_command_marker = work / 'unexpected-theme-command'
     fake_cli.write_text('''#!/bin/bash
@@ -768,6 +785,7 @@ printf x >> "$destination/installs"
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
     print('      real allowlist copies, per-file backups, preserved desktop/repository,')
     print('      managed keybinding imports, local precedence, backups and stable reruns,')
+    print('      floating fullscreen workaround deployment and adoption of the manual loader,')
     print('      native wallpaper selector links, preserved images and stable theme-change hooks,')
     print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
     print('      KDE-only xremap entry, configuration, launcher and service condition,')

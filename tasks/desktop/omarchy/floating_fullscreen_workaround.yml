@@ -1,0 +1,17 @@
+---
+- name: Deploy the temporary floating fullscreen workaround
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/omarchy/hypr/floating_fullscreen_workaround.lua"
+    dest: "{{ target_home }}/.config/hypr/floating_fullscreen_workaround.lua"
+    mode: '0644'
+    backup: true
+  notify: Reload Hyprland
+
+- name: Load the temporary floating fullscreen workaround after Omarchy defaults
+  ansible.builtin.lineinfile:
+    path: "{{ target_home }}/.config/hypr/hyprland.lua"
+    regexp: '^require\("hypr\.floating_fullscreen_workaround"\)( -- Temporary fix for Omarchy #16241\.)?$'
+    line: 'require("hypr.floating_fullscreen_workaround") -- Temporary fix for Omarchy #16241.'
+    insertafter: EOF
+    backup: true
+  notify: Reload Hyprland

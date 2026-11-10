@@ -38,6 +38,11 @@ A full playbook run changes the host; use `test.yml` for prerequisite checks.
 
 ## Agent skills
 
+### Omarchy workaround retirement
+
+Read [Omarchy #16241 retirement](docs/agents/omarchy-16241-retirement.md) when
+checking whether the floating-window workaround can be removed.
+
 ### Issue tracker
 
 Track issues and specs in GitHub Issues for `harryxu/proarch-playbook`. Before issue operations, read `docs/agents/issue-tracker.md`.
