@@ -4,7 +4,7 @@
 -- See current bindings and descriptions:
 --   omarchy menu keybindings --print
 
--- Unbind Omarchy's application shortcuts before loading custom bindings.
+-- Unbind Omarchy's application and system control shortcuts before loading custom bindings.
 for _, keys in ipairs({
   -- Essential applications from default/hypr/bindings/applications.lua.
   "SUPER + RETURN",             -- Terminal
@@ -42,10 +42,30 @@ for _, keys in ipairs({
 
   -- Application launches from default/hypr/bindings/utilities.lua.
   "SUPER + PRINT",              -- Color picker
-  "SUPER + SHIFT + CTRL + A",   -- Agent
   "SUPER + SHIFT + T",          -- btop
+
+  -- System controls from the Omarchy Hotkeys manual.
+  "SUPER + CTRL + A",           -- Audio panel
+  "SUPER + CTRL + B",           -- Bluetooth panel
+  "SUPER + CTRL + N",           -- Network panel
+  "SUPER + CTRL + D",           -- Display panel
+  "SUPER + CTRL + P",           -- Power panel
+  "SUPER + CTRL + ALT + D",     -- Calendar panel
+  "SUPER + CTRL + ALT + E",     -- World clock panel
+  "SUPER + CTRL + S",           -- Share menu
+  "SUPER + CTRL + C",           -- Capture menu
+  "SUPER + CTRL + O",           -- Toggle menu
+  "SUPER + CTRL + H",           -- Hardware menu
+  "SUPER + CTRL + E",           -- Emoji picker
+  "SUPER + CTRL + PERIOD",      -- Transcode media
+  "SUPER + SHIFT + CTRL + A",   -- Agent picker
 }) do
   hl.unbind(keys)
+end
+
+-- Bar panel shortcuts use the physical number keys 1 through 9.
+for keycode = 10, 18 do
+  hl.unbind("SUPER + CTRL + code:" .. keycode)
 end
 
 -- Add a new binding.
@@ -60,8 +80,8 @@ o.bind("SUPER + e", "Omarchy menu", "omarchy-menu toggle root")
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
 
--- Replace the audio panel shortcut with Omasnap's smart screenshot picker.
-o.rebind("SUPER + CTRL + A", "Screenshot", "omasnap")
+-- SUPER + CTRL + A for Omasnap's smart screenshot picker.
+o.bind("SUPER + CTRL + A", "Screenshot", "omasnap")
 
 -- Move the clipboard manager to Super+Shift+V.
 hl.unbind("SUPER + CTRL + V")
