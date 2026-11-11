@@ -31,6 +31,7 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     (work / 'profiles').symlink_to(ROOT / 'profiles', target_is_directory=True)
     (work / 'files').symlink_to(ROOT / 'files', target_is_directory=True)
     (work / 'templates').symlink_to(ROOT / 'templates', target_is_directory=True)
+    (work / 'filter_plugins').symlink_to(ROOT / 'filter_plugins', target_is_directory=True)
     harness = work / 'verify.yml'
     harness.write_text("""---
 - hosts: all
@@ -538,14 +539,33 @@ exit 0
 ''')
     fake_cli.chmod(0o755)
     fake_toggle = fake_native / 'bin/omarchy-toggle-enabled'
-    fake_toggle.write_text('#!/bin/bash\nexit 1\n')
+    fake_toggle.write_text('#!/bin/bash\n[[ $1 == screensaver-off ]]\n')
     fake_toggle.chmod(0o755)
     # A missing user file starts with the installed defaults, including new fields.
+    indicators = {'id': 'omarchy.indicators', 'items': ['Dnd']}
+    clock = {'id': 'omarchy.clock', 'format': 'HH:mm'}
+    weather = {'id': 'omarchy.weather'}
+    tray = {'id': 'omarchy.tray', 'pinned': ['user-app']}
     shell_defaults = {'version': 1, 'bar': {'background': 'opaque', 'position': 'bottom',
-                      'layout': {'left': [{'id': 'omarchy.menu'}]}},
+                      'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', 'user.widget'],
+                                 'centerBegin': [indicators], 'center': [clock],
+                                 'centerEnd': [weather], 'right': [tray], 'tray': ['user.tray']}},
                       'dock': {'autohide': False, 'pinned': ['system-app'], 'size': 48}}
     (fake_native / 'config/omarchy').mkdir(parents=True)
     (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
+    stock_bar = fake_native / 'shell/plugins/bar'
+    stock_bar.mkdir(parents=True)
+    # Reconstruct the old side of the patch as a stand-in for the package's QML.
+    stock_lines = []
+    for line in (ROOT / 'files/omarchy/bar/indicators-hover.patch').read_text().splitlines()[2:]:
+        if line.startswith('@@'):
+            start = int(re.match(r'@@ -(\d+)', line)[1])
+            stock_lines.extend([''] * (start - len(stock_lines) - 1))
+        elif line.startswith((' ', '-')):
+            stock_lines.append(line[1:])
+    stock_qml = '\n'.join(stock_lines) + '\n'
+    (stock_bar / 'Bar.qml').write_text(stock_qml)
+    (stock_bar / 'BarModel.js').write_text('// Installed model\n')
     shell_play = work / 'shell-preferences.yml'
     shell_play.write_text(json.dumps([{
         'name': 'Verify desktop configuration preserves host fonts, monitors and theme',
@@ -562,7 +582,8 @@ exit 0
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/hyprland.yml')},
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/shell.yml')}],
         'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
-                     for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
+                     for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance',
+                                  'Rescan Omarchy plugins']],
     }]))
     shell_cmd = ['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
@@ -587,9 +608,34 @@ exit 0
         path.write_bytes(content)
     shell_json = app_home / '.config/omarchy/shell.json'
     shell_data = json.loads(shell_json.read_text())
-    assert shell_data['bar'] == shell_defaults['bar'] | {'background': 'glassy'}
+    assert shell_data['bar'] == {
+        'background': 'glassy', 'position': 'bottom', 'id': 'proarch.bar',
+        'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', indicators, 'user.widget'],
+                   'centerBegin': [], 'center': [], 'centerEnd': [],
+                   'right': [tray, weather, clock], 'tray': ['user.tray']},
+    }
     assert shell_data['dock'] == shell_defaults['dock'] | {'autohide': True}
-    # User edits to every unmanaged bar/dock field survive subsequent deployments.
+    plugin_bar = app_home / '.config/omarchy/plugins/proarch.bar'
+    assert json.loads((plugin_bar / 'manifest.json').read_text())['id'] == 'proarch.bar'
+    assert 'layoutWidgets.sections.left.some' in (plugin_bar / 'Bar.qml').read_text()
+    assert (plugin_bar / 'BarModel.js').read_bytes() == (stock_bar / 'BarModel.js').read_bytes()
+    assert (stock_bar / 'Bar.qml').read_text() == stock_qml
+    # Migrate the previous layout, with the indicators already on the right.
+    shell_data['bar']['id'] = 'harry.bar'
+    shell_data['bar']['layout']['left'].remove(indicators)
+    shell_data['bar']['layout']['right'].insert(1, indicators)
+    shell_json.write_text(json.dumps(shell_data))
+    command(shell_cmd)
+    shell_data = json.loads(shell_json.read_text())
+    assert shell_data['bar']['id'] == 'proarch.bar'
+    assert shell_data['bar']['layout']['left'][2] == indicators
+    assert shell_data['bar']['layout']['right'] == [tray, weather, clock]
+    deployed_shell = shell_json.read_bytes()
+    stable_shell = command(shell_cmd)
+    assert re.search(r'changed=0\b', stable_shell), stable_shell
+    assert shell_json.read_bytes() == deployed_shell
+    # Hosts can opt out of layout management while retaining shared Shell preferences.
+    shell_cmd += ['-e', '{"omarchy_overrides":{"manage_top_bar":false}}']
     shell_data['bar'] = {'background': 'opaque', 'position': 'left',
                          'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}]},
                          'user-option': {'enabled': True}}

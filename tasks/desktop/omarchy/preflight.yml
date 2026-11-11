@@ -34,6 +34,7 @@
       - omarchy_settings.hooks | default([]) is not string
       - omarchy_settings.plugins is sequence and omarchy_settings.plugins is not string
       - omarchy_settings.screensaver_enabled is boolean
+      - omarchy_settings.manage_top_bar is boolean
       - omarchy_settings.independent_app_themes is boolean
       - omarchy_settings.plugins | map(attribute='id') | unique | list | length == omarchy_settings.plugins | length
 

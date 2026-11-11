@@ -188,6 +188,13 @@ The maintained configuration includes:
   replacing the audio panel shortcut. Flameshot is installed only by the KDE
   profile; existing packages are not automatically removed.
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
+- The top bar puts a hover arrow for status indicators immediately after the
+  workspaces, moves the middle widgets to the right, and puts the clock last.
+  The profile builds its user-owned bar from the installed Omarchy bar and
+  preserves widget settings, tray entries, and the bar position. The hover
+  patch was verified on Omarchy 4.5.0-3 and requires matching upstream QML. Set
+  `omarchy_overrides.manage_top_bar: false` to keep the current bar selection
+  and layout, or override individual sections under `omarchy_overrides.shell.bar.layout`.
 - The system theme is selected manually in Omarchy and is never changed by
   this playbook.
 - SpaceX Starship launch wallpapers from the stock Tokyo Night and Starship

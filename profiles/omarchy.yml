@@ -15,6 +15,7 @@ dotconfig_paths: []
 omarchy:
   version_pattern: ^4\.5\.
   screensaver_enabled: false
+  manage_top_bar: true
   independent_app_themes: true
   gtk_font: Noto Sans CJK SC 11 # Shared by GTK and Qt application interfaces.
   fcitx_font: Noto Sans CJK SC 12
@@ -25,7 +26,7 @@ omarchy:
     - src: /usr/share/omarchy/themes/starship/backgrounds/2-flight14-dawn.webp
       name: spacex-flight14-dawn.webp
   shell:
-    # Manage only these bar/dock fields; preserve all other personal preferences.
+    # Direct Shell overrides are applied after the managed top bar layout.
     bar:
       background: glassy
     dock:

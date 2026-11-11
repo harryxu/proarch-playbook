@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "proarch.bar",
+  "name": "Proarch Bar",
+  "version": "1.0.0",
+  "kinds": ["bar"],
+  "entryPoints": {"bar": "Bar.qml"},
+  "omarchy": {"clonedFrom": "omarchy.bar"}
+}

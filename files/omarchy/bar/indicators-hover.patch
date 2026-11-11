@@ -1,0 +1,79 @@
+--- Bar.qml
++++ Bar.qml
+@@ -820,6 +820,9 @@
+   // hands it to the slot of whichever section shows it (WidgetPool).
+   property var widgetMemo: ({})
+   readonly property var layoutWidgets: BarModel.layoutWidgets(layoutConfig, widgetMemo)
++  readonly property bool leftIndicators: layoutWidgets.sections.left.some(function(key) {
++    return root.entryId(root.layoutWidgets.entries[key]) === "omarchy.indicators"
++  })
+ 
+   onBarConfigChanged: applyBarConfig()
+ 
+@@ -1846,7 +1849,7 @@
+         // hovered while the pointer is over a widget, where a sibling would lose
+         // hover to the section the pointer entered.
+         HoverHandler {
+-          readonly property bool peeking: hovered && BarModel.peeksAt(point.position, barWindow.peekEdge, root.vertical)
++          readonly property bool peeking: hovered && !root.leftIndicators && BarModel.peeksAt(point.position, barWindow.peekEdge, root.vertical)
+           onPeekingChanged: root.setBarHovered(peeking)
+           // Unplugging a monitor destroys its bar without a leave event, which
+           // would strand this surface's tally and hold the peek open for good.
+@@ -2926,11 +2929,13 @@
+     }
+     readonly property real widgetWidth: host ? host.widgetWidth : 0
+     readonly property real widgetHeight: host ? host.widgetHeight : 0
++    readonly property bool indicatorTrigger: region === "left" && moduleName === "omarchy.indicators" && !!activeItem
++    readonly property real indicatorTriggerLength: indicatorTrigger ? Style.bar.statusSlot : 0
+     // Its length along the bar. The dragged widget keeps its place's share
+     // of the room: all of it until the room moves away.
+     readonly property real alongLength: removalPending ? 0 : dragSource
+       ? (root.barDragLengths[root.barDragHome] || 0)
+-      : (root.vertical ? widgetHeight : widgetWidth)
++      : (root.vertical ? widgetHeight : widgetWidth) + indicatorTriggerLength
+ 
+     // Where the dragged widget lands when it goes back where it was.
+     readonly property Item widgetRoom: widgetArea
+@@ -2960,7 +2965,13 @@
+       root.unregisterModuleSlot(slot)
+     }
+ 
+-    HoverHandler { id: moduleHover }
++    HoverHandler {
++      id: moduleHover
++
++      readonly property bool peekingIndicators: slot.indicatorTrigger && hovered
++      onPeekingIndicatorsChanged: root.setBarHovered(peekingIndicators)
++      Component.onDestruction: if (peekingIndicators) root.setBarHovered(false)
++    }
+ 
+     // The widget at its own size. Lifted out by a drag, it folds away with
+     // its room.
+@@ -2978,10 +2989,27 @@
+       Item {
+         id: holder
+         anchors.centerIn: parent
++        anchors.horizontalCenterOffset: root.vertical ? 0 : slot.indicatorTriggerLength / 2
++        anchors.verticalCenterOffset: root.vertical ? slot.indicatorTriggerLength / 2 : 0
+         width: slot.widgetWidth
+         height: slot.widgetHeight
+       }
+ 
++      // Keep the arrow beside the workspaces as the indicator block grows.
++      Loader {
++        active: slot.indicatorTrigger
++        width: root.vertical ? parent.width : slot.indicatorTriggerLength
++        height: root.vertical ? slot.indicatorTriggerLength : parent.height
++
++        sourceComponent: BarIconButton {
++          bar: root
++          text: "\uf054"
++          textRotation: root.vertical ? 90 : 0
++          interactive: false
++          opacity: slot.hovered ? 1 : 0.65
++        }
++      }
++
+       // The tray section's outline, as the center box's: around what it
+       // holds, the room for the dragged widget included, or a line where it
+       // holds nothing. Drawn over the tray rather than in its drawer, whose

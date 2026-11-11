@@ -35,6 +35,7 @@
   become_user: "{{ target_user }}"
   environment:
     HOME: "{{ target_home }}"
+    OMARCHY_PATH: /usr/share/omarchy
     XDG_RUNTIME_DIR: /run/user/{{ target_uid }}
     DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
   when: has_hyprland_session

@@ -1,0 +1,46 @@
+---
+- name: Build the personal top bar from the installed Omarchy bar
+  ansible.builtin.command:
+    argv:
+      - patch
+      - --silent
+      - --batch
+      - --forward
+      - --fuzz=0
+      - --reject-file=-
+      - --output=-
+      - "{{ omarchy_stock_bar_dir }}/Bar.qml"
+    stdin: "{{ lookup('ansible.builtin.file', playbook_dir + '/files/omarchy/bar/indicators-hover.patch', rstrip=false) }}"
+    stdin_add_newline: false
+    strip_empty_ends: false
+  register: omarchy_patched_bar
+  changed_when: false
+  check_mode: false
+
+- name: Ensure the personal top bar plugin directory exists
+  ansible.builtin.file:
+    path: "{{ omarchy_top_bar_dir }}"
+    state: directory
+    mode: '0755'
+  register: omarchy_top_bar_directory
+
+- name: Deploy the personal top bar files
+  ansible.builtin.copy:
+    src: "{{ item.src | default(omit) }}"
+    content: "{{ item.content | default(omit) }}"
+    dest: "{{ omarchy_top_bar_dir }}/{{ item.name }}"
+    remote_src: "{{ item.remote_src | default(false) }}"
+    mode: '0644'
+    backup: true
+  loop:
+    - name: Bar.qml
+      content: "{{ omarchy_patched_bar.stdout }}"
+    - name: BarModel.js
+      src: "{{ omarchy_stock_bar_dir }}/BarModel.js"
+      remote_src: true
+    - name: manifest.json
+      src: "{{ playbook_dir }}/files/omarchy/bar/manifest.json"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not ansible_check_mode or not omarchy_top_bar_directory.changed
+  notify: Rescan Omarchy plugins

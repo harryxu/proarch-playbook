@@ -22,15 +22,26 @@
          else (ansible_facts.env.OMARCHY_PATH | default('/usr/share/omarchy')) + '/config/omarchy/shell.json' }}
   register: omarchy_shell_source
 
+- name: Deploy the managed top bar
+  ansible.builtin.include_tasks: bar.yml
+  vars:
+    omarchy_stock_bar_dir: "{{ (ansible_facts.env.OMARCHY_PATH | default('/usr/share/omarchy')) + '/shell/plugins/bar' }}"
+    omarchy_top_bar_dir: "{{ target_home }}/.config/omarchy/plugins/proarch.bar"
+  when: omarchy_settings.manage_top_bar
+
 - name: Merge managed Shell preferences while preserving personal settings
   ansible.builtin.copy:
     dest: "{{ target_home }}/.config/omarchy/shell.json"
-    content: "{{ (omarchy_shell_source.content | b64decode | from_json)
-                | combine(omarchy_settings.shell, recursive=true)
-                | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
-"
+    content: |
+      {{ omarchy_shell_base | combine(omarchy_settings.shell, recursive=true)
+         | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
     mode: '0600'
     backup: true
+  vars:
+    omarchy_shell_current: "{{ omarchy_shell_source.content | b64decode | from_json }}"
+    omarchy_shell_base: >-
+      {{ (omarchy_shell_current | place_omarchy_bar_widgets)
+         if omarchy_settings.manage_top_bar else omarchy_shell_current }}
   notify: Synchronize Omarchy bar appearance
 
 - name: Query the explicit screensaver preference
