@@ -19,12 +19,13 @@
            onPeekingChanged: root.setBarHovered(peeking)
            // Unplugging a monitor destroys its bar without a leave event, which
            // would strand this surface's tally and hold the peek open for good.
-@@ -2926,11 +2929,13 @@
+@@ -2926,11 +2929,14 @@
      }
      readonly property real widgetWidth: host ? host.widgetWidth : 0
      readonly property real widgetHeight: host ? host.widgetHeight : 0
 +    readonly property bool indicatorTrigger: region === "left" && moduleName === "omarchy.indicators" && !!activeItem
-+    readonly property real indicatorTriggerLength: indicatorTrigger ? Style.bar.statusSlot : 0
++    readonly property int indicatorTriggerGap: indicatorTrigger ? Style.space(6) : 0
++    readonly property real indicatorTriggerLength: indicatorTrigger ? Style.bar.statusSlot + indicatorTriggerGap : 0
      // Its length along the bar. The dragged widget keeps its place's share
      // of the room: all of it until the room moves away.
      readonly property real alongLength: removalPending ? 0 : dragSource
@@ -34,7 +35,7 @@
  
      // Where the dragged widget lands when it goes back where it was.
      readonly property Item widgetRoom: widgetArea
-@@ -2960,7 +2965,13 @@
+@@ -2960,7 +2966,13 @@
        root.unregisterModuleSlot(slot)
      }
  
@@ -49,7 +50,7 @@
  
      // The widget at its own size. Lifted out by a drag, it folds away with
      // its room.
-@@ -2978,10 +2989,27 @@
+@@ -2978,10 +2990,28 @@
        Item {
          id: holder
          anchors.centerIn: parent
@@ -59,18 +60,19 @@
          height: slot.widgetHeight
        }
  
-+      // Keep the arrow beside the workspaces as the indicator block grows.
++      // Keep the trigger beside the workspaces as the indicator block grows.
 +      Loader {
 +        active: slot.indicatorTrigger
-+        width: root.vertical ? parent.width : slot.indicatorTriggerLength
-+        height: root.vertical ? slot.indicatorTriggerLength : parent.height
++        x: root.vertical ? 0 : slot.indicatorTriggerGap
++        y: root.vertical ? slot.indicatorTriggerGap : 0
++        width: root.vertical ? parent.width : Style.bar.statusSlot
++        height: root.vertical ? Style.bar.statusSlot : parent.height
 +
 +        sourceComponent: BarIconButton {
 +          bar: root
-+          text: "\uf054"
-+          textRotation: root.vertical ? 90 : 0
++          text: "\uf0e7"
 +          interactive: false
-+          opacity: slot.hovered ? 1 : 0.65
++          opacity: slot.hovered ? 0.68 : 0.48
 +        }
 +      }
 +
