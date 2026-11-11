@@ -4,13 +4,49 @@
 -- See current bindings and descriptions:
 --   omarchy menu keybindings --print
 
--- To disable every Omarchy default binding, set this in
--- ~/.config/hypr/hyprland.lua before require("default.hypr.omarchy"), then add
--- only the bindings you want below:
---   omarchy_default_bindings = false
+-- Unbind Omarchy's application shortcuts before loading custom bindings.
+for _, keys in ipairs({
+  -- Essential applications from default/hypr/bindings/applications.lua.
+  "SUPER + RETURN",             -- Terminal
+  "SUPER + SHIFT + RETURN",     -- Browser
+  "SUPER + SHIFT + F",          -- File manager
+  "SUPER + ALT + SHIFT + F",    -- File manager in the current directory
+  "SUPER + SHIFT + B",          -- Browser
+  "SUPER + SHIFT + ALT + B",    -- Private browser
+  "SUPER + SHIFT + N",          -- Editor
 
--- To disable all preinstalled app/webapp bindings, set:
---   omarchy_preinstalled_bindings = false
+  -- Preinstalled apps, TUIs, and web apps.
+  "SUPER + ALT + RETURN",       -- Tmux
+  "SUPER + CTRL + RETURN",      -- Herdr
+  "SUPER + SHIFT + Q",          -- Calculator
+  "XF86Calculator",
+  "SUPER + SHIFT + M",          -- Spotify
+  "SUPER + SHIFT + ALT + M",    -- cliamp
+  "SUPER + SHIFT + D",          -- lazydocker
+  "SUPER + SHIFT + G",          -- Signal
+  "SUPER + SHIFT + O",          -- Obsidian
+  "SUPER + SHIFT + W",          -- Omawrite
+  "SUPER + SHIFT + SLASH",      -- 1Password
+  "SUPER + SHIFT + A",          -- ChatGPT
+  "SUPER + SHIFT + ALT + A",    -- Grok
+  "SUPER + SHIFT + C",          -- Calendar
+  "SUPER + SHIFT + E",          -- Email
+  "SUPER + SHIFT + ALT + E",    -- New email
+  "SUPER + SHIFT + Y",          -- YouTube
+  "SUPER + SHIFT + ALT + G",    -- WhatsApp
+  "SUPER + SHIFT + CTRL + G",   -- Google Messages
+  "SUPER + SHIFT + P",          -- Google Photos
+  "SUPER + SHIFT + S",          -- Google Maps
+  "SUPER + SHIFT + X",          -- X
+  "SUPER + SHIFT + ALT + X",    -- X Post
+
+  -- Application launches from default/hypr/bindings/utilities.lua.
+  "SUPER + PRINT",              -- Color picker
+  "SUPER + SHIFT + CTRL + A",   -- Agent
+  "SUPER + SHIFT + T",          -- btop
+}) do
+  hl.unbind(keys)
+end
 
 -- Add a new binding.
 -- o.bind("SUPER + SHIFT + R", "SSH", "alacritty -e ssh your-server")
@@ -19,9 +55,6 @@
 -- This example changes SUPER+SPACE from the launcher to the Omarchy root menu.
 -- hl.unbind("SUPER + SPACE")
 o.bind("SUPER + e", "Omarchy menu", "omarchy-menu toggle root")
-
--- Disable a default binding without replacing it.
--- hl.unbind("SUPER + SHIFT + B")
 
 -- Logitech MX Keys examples:
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
