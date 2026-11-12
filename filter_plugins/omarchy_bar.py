@@ -32,13 +32,19 @@ def place_omarchy_bar_widgets(config):
     return {**config, "bar": {**bar, "id": "proarch.bar", "layout": layout}}
 
 
-def hide_superwhisper_tray_icon(config):
+def apply_omarchy_bar_visibility(config, hide_superwhisper, disable_agents):
     bar = config.get("bar", {})
     if "layout" not in bar:
         return config
 
+    excluded_widgets = set()
+    if hide_superwhisper:
+        excluded_widgets.add("superwhisper.panel")
+    if disable_agents:
+        excluded_widgets.update(("omarchy.agents", "omarchy.model-usage"))
+
     def hide_native_icon(entry):
-        if widget_id(entry) != "omarchy.tray":
+        if not hide_superwhisper or widget_id(entry) != "omarchy.tray":
             return entry
         tray = dict(entry) if isinstance(entry, Mapping) else {"id": entry}
         hidden = tray.get("hidden", [])
@@ -48,7 +54,7 @@ def hide_superwhisper_tray_icon(config):
 
     layout = {
         section: [hide_native_icon(entry) for entry in entries
-                  if widget_id(entry) != "superwhisper.panel"]
+                  if widget_id(entry) not in excluded_widgets]
         for section, entries in bar["layout"].items()
     }
     return {**config, "bar": {**bar, "layout": layout}}
@@ -58,5 +64,5 @@ class FilterModule:
     def filters(self):
         return {
             "place_omarchy_bar_widgets": place_omarchy_bar_widgets,
-            "hide_superwhisper_tray_icon": hide_superwhisper_tray_icon,
+            "apply_omarchy_bar_visibility": apply_omarchy_bar_visibility,
         }

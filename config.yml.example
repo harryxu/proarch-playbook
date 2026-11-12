@@ -47,6 +47,7 @@ omarchy_keyboard_overrides: []
 omarchy_overrides:
   independent_app_themes: true
   # manage_top_bar: false # Keep the current bar selection and widget placement.
+  # disable_agents_panel: false # Leave the Agents widget and usage polling to the user.
   # hide_superwhisper_tray_icon: false # Leave Superwhisper's tray visibility to the user.
   # disable_superwhisper_autostart: false # Leave Superwhisper's login startup to the user.
   gtk_font: Noto Sans CJK SC 11 # Also used by Qt via the GTK platform theme.

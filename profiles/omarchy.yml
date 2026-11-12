@@ -16,6 +16,7 @@ omarchy:
   version_pattern: ^4\.5\.
   screensaver_enabled: false
   manage_top_bar: true
+  disable_agents_panel: true
   hide_superwhisper_tray_icon: true
   disable_superwhisper_autostart: true
   independent_app_themes: true

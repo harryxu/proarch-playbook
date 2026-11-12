@@ -550,8 +550,8 @@ exit 0
     shell_defaults = {'version': 1, 'bar': {'background': 'opaque', 'position': 'bottom',
                       'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', 'user.widget'],
                                  'centerBegin': [indicators], 'center': [clock],
-                                 'centerEnd': [weather], 'right': [tray],
-                                 'tray': ['user.tray', {'id': 'superwhisper.panel'}]}},
+                                 'centerEnd': [weather], 'right': [tray, {'id': 'omarchy.agents'}],
+                                 'tray': ['user.tray', {'id': 'superwhisper.panel'}, 'omarchy.model-usage']}},
                       'dock': {'autohide': False, 'pinned': ['system-app'], 'size': 48}}
     (fake_native / 'config/omarchy').mkdir(parents=True)
     (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
@@ -639,7 +639,8 @@ exit 0
     # Hosts can opt out of layout management while retaining shared Shell preferences.
     shell_cmd += ['-e', '{"omarchy_overrides":{"manage_top_bar":false}}']
     shell_data['bar'] = {'background': 'opaque', 'position': 'left',
-                         'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}]},
+                         'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}],
+                                    'right': ['omarchy.agents']},
                          'user-option': {'enabled': True}}
     shell_data['dock'] = {'autohide': False, 'pinned': ['user-app'], 'size': 64}
     shell_data['font'] = {'family': 'User Mono', 'base-size': 17}
@@ -647,6 +648,7 @@ exit 0
     command(shell_cmd)
     expected_shell = shell_data | {'bar': shell_data['bar'] | {'background': 'glassy'},
                                   'dock': shell_data['dock'] | {'autohide': True}}
+    expected_shell['bar']['layout'] = shell_data['bar']['layout'] | {'right': []}
     assert json.loads(shell_json.read_text()) == expected_shell
     assert all(path.read_bytes() == content for path, content in desktop_originals.items())
     deployed_shell = shell_json.read_bytes()

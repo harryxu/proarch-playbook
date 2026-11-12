@@ -33,8 +33,10 @@
   ansible.builtin.copy:
     dest: "{{ target_home }}/.config/omarchy/shell.json"
     content: |
-      {{ (omarchy_shell_merged | hide_superwhisper_tray_icon
-          if omarchy_settings.hide_superwhisper_tray_icon else omarchy_shell_merged) | to_nice_json }}
+      {{ omarchy_shell_merged
+         | apply_omarchy_bar_visibility(omarchy_settings.hide_superwhisper_tray_icon,
+                                        omarchy_settings.disable_agents_panel)
+         | to_nice_json }}
     mode: '0600'
     backup: true
   vars:

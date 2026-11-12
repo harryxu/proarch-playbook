@@ -35,6 +35,7 @@
       - omarchy_settings.plugins is sequence and omarchy_settings.plugins is not string
       - omarchy_settings.screensaver_enabled is boolean
       - omarchy_settings.manage_top_bar is boolean
+      - omarchy_settings.disable_agents_panel is boolean
       - omarchy_settings.hide_superwhisper_tray_icon is boolean
       - omarchy_settings.disable_superwhisper_autostart is boolean
       - omarchy_settings.independent_app_themes is boolean
