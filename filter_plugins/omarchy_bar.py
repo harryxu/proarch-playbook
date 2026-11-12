@@ -32,6 +32,31 @@ def place_omarchy_bar_widgets(config):
     return {**config, "bar": {**bar, "id": "proarch.bar", "layout": layout}}
 
 
+def hide_superwhisper_tray_icon(config):
+    bar = config.get("bar", {})
+    if "layout" not in bar:
+        return config
+
+    def hide_native_icon(entry):
+        if widget_id(entry) != "omarchy.tray":
+            return entry
+        tray = dict(entry) if isinstance(entry, Mapping) else {"id": entry}
+        hidden = tray.get("hidden", [])
+        if "superwhisper" not in hidden:
+            tray["hidden"] = [*hidden, "superwhisper"]
+        return tray
+
+    layout = {
+        section: [hide_native_icon(entry) for entry in entries
+                  if widget_id(entry) != "superwhisper.panel"]
+        for section, entries in bar["layout"].items()
+    }
+    return {**config, "bar": {**bar, "layout": layout}}
+
+
 class FilterModule:
     def filters(self):
-        return {"place_omarchy_bar_widgets": place_omarchy_bar_widgets}
+        return {
+            "place_omarchy_bar_widgets": place_omarchy_bar_widgets,
+            "hide_superwhisper_tray_icon": hide_superwhisper_tray_icon,
+        }

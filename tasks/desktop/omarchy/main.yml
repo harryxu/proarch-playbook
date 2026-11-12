@@ -48,5 +48,9 @@
     - name: Deploy Shell preferences
       ansible.builtin.include_tasks: shell.yml
 
+    - name: Disable Superwhisper login autostart
+      ansible.builtin.include_tasks: superwhisper.yml
+      when: omarchy_settings.disable_superwhisper_autostart
+
     - name: Deploy optional custom menus and hooks
       ansible.builtin.include_tasks: extensions.yml

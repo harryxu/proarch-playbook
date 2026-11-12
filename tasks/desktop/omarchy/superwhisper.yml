@@ -1,0 +1,14 @@
+---
+- name: Check for the packaged Superwhisper user service
+  ansible.builtin.stat:
+    path: /usr/lib/systemd/user/superwhisper.service
+  register: superwhisper_unit
+
+- name: Disable the Superwhisper user service for future sessions
+  ansible.builtin.command:
+    argv: [systemctl, --user, --root=/, --no-reload, disable, superwhisper.service]
+  environment:
+    LC_ALL: C
+  register: superwhisper_autostart
+  changed_when: "'Removed' in superwhisper_autostart.stderr"
+  when: superwhisper_unit.stat.exists

@@ -33,8 +33,8 @@
   ansible.builtin.copy:
     dest: "{{ target_home }}/.config/omarchy/shell.json"
     content: |
-      {{ omarchy_shell_base | combine(omarchy_settings.shell, recursive=true)
-         | combine({'plugins': omarchy_plugin_entries}) | to_nice_json }}
+      {{ (omarchy_shell_merged | hide_superwhisper_tray_icon
+          if omarchy_settings.hide_superwhisper_tray_icon else omarchy_shell_merged) | to_nice_json }}
     mode: '0600'
     backup: true
   vars:
@@ -42,6 +42,9 @@
     omarchy_shell_base: >-
       {{ (omarchy_shell_current | place_omarchy_bar_widgets)
          if omarchy_settings.manage_top_bar else omarchy_shell_current }}
+    omarchy_shell_merged: >-
+      {{ omarchy_shell_base | combine(omarchy_settings.shell, recursive=true)
+         | combine({'plugins': omarchy_plugin_entries}) }}
   notify: Synchronize Omarchy bar appearance
 
 - name: Query the explicit screensaver preference

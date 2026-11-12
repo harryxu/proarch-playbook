@@ -545,11 +545,13 @@ exit 0
     indicators = {'id': 'omarchy.indicators', 'items': ['Dnd']}
     clock = {'id': 'omarchy.clock', 'format': 'HH:mm'}
     weather = {'id': 'omarchy.weather'}
-    tray = {'id': 'omarchy.tray', 'pinned': ['user-app']}
+    tray = {'id': 'omarchy.tray', 'pinned': ['user-app'], 'hidden': ['other-app']}
+    managed_tray = tray | {'hidden': ['other-app', 'superwhisper']}
     shell_defaults = {'version': 1, 'bar': {'background': 'opaque', 'position': 'bottom',
                       'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', 'user.widget'],
                                  'centerBegin': [indicators], 'center': [clock],
-                                 'centerEnd': [weather], 'right': [tray], 'tray': ['user.tray']}},
+                                 'centerEnd': [weather], 'right': [tray],
+                                 'tray': ['user.tray', {'id': 'superwhisper.panel'}]}},
                       'dock': {'autohide': False, 'pinned': ['system-app'], 'size': 48}}
     (fake_native / 'config/omarchy').mkdir(parents=True)
     (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
@@ -612,7 +614,7 @@ exit 0
         'background': 'glassy', 'position': 'bottom', 'id': 'proarch.bar',
         'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', indicators, 'user.widget'],
                    'centerBegin': [], 'center': [], 'centerEnd': [],
-                   'right': [tray, weather, clock], 'tray': ['user.tray']},
+                   'right': [managed_tray, weather, clock], 'tray': ['user.tray']},
     }
     assert shell_data['dock'] == shell_defaults['dock'] | {'autohide': True}
     plugin_bar = app_home / '.config/omarchy/plugins/proarch.bar'
@@ -629,7 +631,7 @@ exit 0
     shell_data = json.loads(shell_json.read_text())
     assert shell_data['bar']['id'] == 'proarch.bar'
     assert shell_data['bar']['layout']['left'][2] == indicators
-    assert shell_data['bar']['layout']['right'] == [tray, weather, clock]
+    assert shell_data['bar']['layout']['right'] == [managed_tray, weather, clock]
     deployed_shell = shell_json.read_bytes()
     stable_shell = command(shell_cmd)
     assert re.search(r'changed=0\b', stable_shell), stable_shell

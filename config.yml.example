@@ -47,6 +47,8 @@ omarchy_keyboard_overrides: []
 omarchy_overrides:
   independent_app_themes: true
   # manage_top_bar: false # Keep the current bar selection and widget placement.
+  # hide_superwhisper_tray_icon: false # Leave Superwhisper's tray visibility to the user.
+  # disable_superwhisper_autostart: false # Leave Superwhisper's login startup to the user.
   gtk_font: Noto Sans CJK SC 11 # Also used by Qt via the GTK platform theme.
   fcitx_font: Noto Sans CJK SC 12 # Applied only when input_method is enabled.
   # Store the stock Tokyo Night and Starship launch images in this collection.
