@@ -25,3 +25,10 @@
 - name: Configure removable storage integrations
   ansible.builtin.import_tasks: removable_storage.yml
   tags: [removable_storage]
+
+- name: Apply the Omarchy T2 LUKS keyboard workaround
+  ansible.builtin.import_tasks: ../desktop/omarchy/t2_luks_keyboard.yml
+  when:
+    - desktop_profile == 'omarchy'
+    - features.t2_luks_keyboard_workaround
+  tags: [t2_luks_keyboard]

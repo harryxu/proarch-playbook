@@ -103,6 +103,7 @@ omarchy_overrides:
 | KDE xremap integration | Opt-in | Unsupported; use Hyprland integration |
 | USB APFS automount | Unsupported by this playbook | Opt-in, read-only |
 | Intel Titan Ridge USB hotplug workaround on matching T2 Macs | Automatic | Automatic |
+| [T2 MacBook keyboard at LUKS unlock](docs/omarchy-t2-luks-keyboard.md) | Unsupported by this playbook | Opt-in workaround for affected hosts |
 
 `false` skips a feature; it does not remove existing packages or undo earlier
 configuration. Before reusing a home previously configured by the old playbook,

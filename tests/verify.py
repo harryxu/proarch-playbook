@@ -100,7 +100,39 @@ with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
         assert data['features']['apfs_automount'] is False
+        assert data['features']['t2_luks_keyboard_workaround'] is False
         assert 't2_usb_hotplug' not in data['features']
+
+    # The legacy installer filter drops every listed module for every kernel.
+    # The late drop-in must restore just the optional T2 driver.
+    t2_filter = work / 'zz-omarchy-kernel-modules.conf'
+    t2_filter.write_text("""_omarchy_absent=(t2bce_vhci thunderbolt)
+_omarchy_kept=()
+for _omarchy_module in "${MODULES[@]}"; do
+  [[ " ${_omarchy_absent[*]} " == *" $_omarchy_module "* ]] || _omarchy_kept+=("$_omarchy_module")
+done
+MODULES=("${_omarchy_kept[@]}")
+unset _omarchy_absent _omarchy_kept _omarchy_module
+""")
+    t2_workaround = ROOT / 'files/omarchy/zz-proarch-t2-luks-keyboard.conf'
+    assert command(['env', 'LC_ALL=C.UTF-8', 'sort', '-Vu'],
+                   input=f'{t2_workaround.name}\n{t2_filter.name}\n').splitlines() == [
+                       t2_filter.name, t2_workaround.name]
+    source_t2_configs = """MODULES=("$3" usbhid thunderbolt)
+source "$1"
+if [[ -n $2 ]]; then
+  source "$2"
+  source "$2"
+fi
+printf '%s\n' "${MODULES[@]}"
+"""
+    for module, drop_in, expected_modules in [
+        ('t2bce_vhci', '', ['usbhid']),
+        ('t2bce_vhci', str(t2_workaround), ['usbhid', 't2bce_vhci?']),
+        ('t2bce_vhci?', str(t2_workaround), ['t2bce_vhci?', 'usbhid']),
+    ]:
+        assert command(['bash', '-ec', source_t2_configs, 'fixture', str(t2_filter),
+                        drop_in, module]).splitlines() == expected_modules
 
     # Deploy the module and load it before user bindings, without overwriting them.
     bindings_source = (ROOT / 'files/omarchy/hypr/bindings.lua').read_bytes()
@@ -317,6 +349,11 @@ end
     output = run(dict(desktop_profile='kde', feature_overrides={'apfs_automount': True}),
                  success=False)
     assert 'APFS automount uses the Omarchy desktop session' in output
+    run(dict(desktop_profile='omarchy', feature_overrides={'t2_luks_keyboard_workaround': True}))
+    assert json.loads((work / 'result.json').read_text())['features']['t2_luks_keyboard_workaround']
+    output = run(dict(desktop_profile='kde',
+                      feature_overrides={'t2_luks_keyboard_workaround': True}), success=False)
+    assert 'T2 LUKS keyboard workaround supports Omarchy only' in output
     output = run(dict(desktop_profile='omarchy', verify_xremap_entry=True),
                  success=False, check=True)
     assert 'xremap requires the KDE desktop profile.' in output

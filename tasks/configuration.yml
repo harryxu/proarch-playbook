@@ -72,10 +72,12 @@
       - features.values() | reject('boolean') | list | length == 0
       - not features.keybindings or desktop_profile == 'kde'
       - not features.apfs_automount or desktop_profile == 'omarchy'
+      - not features.t2_luks_keyboard_workaround or desktop_profile == 'omarchy'
       - not features.rime_ice or features.input_method
       - desktop_profile != 'omarchy' or (not features.cliphist and not features.vicinae)
     fail_msg: >-
       Use YAML true/false for feature switches. Legacy xremap supports KDE only.
       APFS automount uses the Omarchy desktop session.
+      The T2 LUKS keyboard workaround supports Omarchy only.
       Omarchy owns its clipboard and launcher services; do not start the legacy
       cliphist or Vicinae integrations there.

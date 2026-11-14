@@ -18,6 +18,7 @@ feature_defaults:
   snapper: false
   keybindings: false
   apfs_automount: false
+  t2_luks_keyboard_workaround: false
 feature_overrides: {}
 extra_packages: []
 extra_aur_packages: []

@@ -1,0 +1,101 @@
+---
+- name: Detect the Apple T2 chip for early boot keyboard support
+  ansible.builtin.command:
+    argv:
+      - udevadm
+      - trigger
+      - --dry-run
+      - --verbose
+      - --subsystem-match=pci
+      - --attr-match=vendor=0x106b
+      - --attr-match=device=0x180[12]
+  register: t2_luks_pci
+  changed_when: false
+  check_mode: false
+
+- name: Require Apple T2 hardware
+  ansible.builtin.assert:
+    that: t2_luks_pci.stdout_lines | length > 0
+    fail_msg: Enable t2_luks_keyboard_workaround only on an affected Apple T2 Mac.
+
+- name: Find the module tree of the installed linux-t2 package
+  ansible.builtin.command: pacman -Qlq linux-t2
+  register: t2_luks_kernel_files
+  changed_when: false
+  check_mode: false
+
+- name: Read the Limine configuration on the EFI partition
+  ansible.builtin.slurp:
+    src: /boot/limine.conf
+  register: t2_luks_limine
+
+- name: Identify the installed kernel release and its UKI path
+  ansible.builtin.set_fact:
+    t2_luks_kernel_releases: "{{ t2_luks_kernel_files.stdout | regex_findall(t2_luks_kernel_path_pattern) }}"
+    t2_luks_uki_paths: "{{ t2_luks_limine.content | b64decode | regex_findall(t2_luks_uki_path_pattern) | unique | list }}"
+  vars:
+    t2_luks_kernel_path_pattern: '(?m)^/usr/lib/modules/([^/\s]+)/modules\.builtin$'
+    t2_luks_uki_path_pattern: '(?m)^[ \t]*path:[ \t]*boot\(\):(/EFI/Linux/[a-zA-Z0-9_-]+_linux-t2\.efi)(?:#[^\r\n]*)?[ \t]*$'
+
+- name: Require an existing linux-t2 Limine UKI entry
+  ansible.builtin.assert:
+    that:
+      - t2_luks_kernel_releases | length == 1
+      - t2_luks_uki_paths | length == 1
+    fail_msg: >-
+      The workaround requires an installed linux-t2 package and a Limine linux-t2
+      UKI under /boot/EFI/Linux. See docs/omarchy-t2-luks-keyboard.md.
+
+- name: Apply and verify the temporary T2 module configuration
+  vars:
+    t2_luks_kernel_release: "{{ t2_luks_kernel_releases | first }}"
+    t2_luks_uki: "/boot{{ t2_luks_uki_paths | first }}"
+    t2_luks_module_pattern: '(?m)^usr/lib/modules/{{ t2_luks_kernel_release | regex_escape }}/[^\n]*/(t2bce_(?:vhci|core|dma))\.ko(?:\.\w+)?$'
+    t2_luks_modules: [t2bce_vhci, t2bce_core, t2bce_dma]
+  block:
+    - name: Confirm the installed linux-t2 kernel provides the keyboard driver
+      ansible.builtin.command:
+        argv: [modinfo, -k, "{{ t2_luks_kernel_release }}", t2bce_vhci]
+      changed_when: false
+      check_mode: false
+
+    - name: Inspect the existing linux-t2 UKI
+      ansible.builtin.command:
+        argv: [lsinitcpio, --list, --nocolor, "{{ t2_luks_uki }}"]
+      register: t2_luks_current_image
+      changed_when: false
+      check_mode: false
+
+    - name: Install the temporary mkinitcpio drop-in after Omarchy's module filter
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/omarchy/zz-proarch-t2-luks-keyboard.conf"
+        dest: /etc/mkinitcpio.conf.d/zz-proarch-t2-luks-keyboard.conf
+        owner: root
+        group: root
+        mode: '0644'
+        backup: true
+        validate: /usr/bin/bash -n %s
+
+    # Check the image on every run so a failed or interrupted rebuild is retried.
+    - name: Rebuild and inspect the linux-t2 UKI when required modules are missing
+      when:
+        - not ansible_check_mode
+        - t2_luks_modules | difference(t2_luks_current_image.stdout | regex_findall(t2_luks_module_pattern)) | length > 0
+      block:
+        - name: Rebuild only the linux-t2 boot image through Limine
+          ansible.builtin.command: limine-mkinitcpio linux-t2
+          changed_when: true
+
+        - name: Inspect the rebuilt linux-t2 UKI
+          ansible.builtin.command:
+            argv: [lsinitcpio, --list, --nocolor, "{{ t2_luks_uki }}"]
+          register: t2_luks_rebuilt_image
+          changed_when: false
+
+        # limine-mkinitcpio can exit successfully after skipping a failed build.
+        - name: Require all three T2 driver modules in the rebuilt image
+          ansible.builtin.assert:
+            that: t2_luks_modules | difference(t2_luks_rebuilt_image.stdout | regex_findall(t2_luks_module_pattern)) | length == 0
+            fail_msg: >-
+              {{ t2_luks_uki }} is missing T2 driver modules for {{ t2_luks_kernel_release }}.
+              Check the rebuild output and rerun this task before rebooting.
