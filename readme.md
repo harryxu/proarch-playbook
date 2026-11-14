@@ -225,7 +225,8 @@ The maintained configuration includes:
   needed. Log out and back in after deploying the session environment, then
   reopen applications. Applications that explicitly choose their own font
   retain that choice.
-- User-owned plugins installed only when missing, with the obsolete `dropspace` activation entry removed.
+- User-owned plugins installed only when missing. Existing manual activations
+  and their settings are retained.
 
 | Plugin | Source | Default version |
 | --- | --- | --- |
@@ -235,15 +236,23 @@ The maintained configuration includes:
 Super Switcher enables macOS-style application switching with `Super+Tab` and
 `Super+Shift+Tab`. The plugin registers these shortcuts at runtime.
 
-`omarchy_overrides.plugins` replaces the complete plugin list; each entry
-requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`
+`omarchy_overrides.plugins` replaces the profile's list of Ansible-managed
+plugins. Each entry requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`
 for the initial installation; an explicit branch, tag, or commit can be selected.
 An existing `manifest.json` marks the plugin as installed, so later runs skip
 Git operations entirely, preserving its installed version and local edits.
 Manifest IDs are still validated. Update existing plugins separately; changing
-`version` does not update an installed plugin. Optional `settings` are merged
-into that plugin's Shell activation entry. Removing an entry disables its
-activation without deleting its source directory.
+`version` does not update an installed plugin. The playbook merges Shell
+activation entries by ID and recursively applies explicit `settings` to
+managed entries. Existing entries keep their order, and newly managed entries
+are appended. Removing a plugin from the managed list leaves its current
+activation and files in place. Use Omarchy's plugin commands to disable or
+uninstall it.
+
+The playbook applies the profile's Shell preferences, host overrides, and
+enabled bar rules to the existing `shell.json`. Other keys, including plugin
+disable and clone metadata, are preserved. When the merged values already
+match, the file is left untouched. Changes to an existing file create a backup.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required
 personal imports. The playbook deploys its bindings as

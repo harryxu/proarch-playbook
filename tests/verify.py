@@ -654,6 +654,7 @@ exit 0
                    'right': [managed_tray, weather, clock], 'tray': ['user.tray']},
     }
     assert shell_data['dock'] == shell_defaults['dock'] | {'autohide': True}
+    assert shell_data['plugins'] == [{'id': 'harryxu.dropspace'}, {'id': 'harryxu.super-switcher'}]
     plugin_bar = app_home / '.config/omarchy/plugins/proarch.bar'
     assert json.loads((plugin_bar / 'manifest.json').read_text())['id'] == 'proarch.bar'
     assert 'layoutWidgets.sections.left.some' in (plugin_bar / 'Bar.qml').read_text()
@@ -674,23 +675,45 @@ exit 0
     assert re.search(r'changed=0\b', stable_shell), stable_shell
     assert shell_json.read_bytes() == deployed_shell
     # Hosts can opt out of layout management while retaining shared Shell preferences.
-    shell_cmd += ['-e', '{"omarchy_overrides":{"manage_top_bar":false}}']
+    shell_cmd += ['-e', json.dumps({'omarchy_overrides': {
+        'manage_top_bar': False,
+        'plugins': [
+            {'id': 'harryxu.super-switcher', 'repo': 'unused',
+             'settings': {'options': {'delay': 100}}},
+            {'id': 'fixture.new', 'repo': 'unused'},
+        ],
+    }})]
     shell_data['bar'] = {'background': 'opaque', 'position': 'left',
                          'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}],
                                     'right': ['omarchy.agents']},
                          'user-option': {'enabled': True}}
     shell_data['dock'] = {'autohide': False, 'pinned': ['user-app'], 'size': 64}
     shell_data['font'] = {'family': 'User Mono', 'base-size': 17}
+    dogedock = {'id': 'harryxu.dogedock', 'options': {'size': 64}}
+    switcher = {'id': 'harryxu.super-switcher', 'options': {'delay': 50, 'preview': True}}
+    dropped_from_management = {'id': 'harryxu.dropspace'}
+    shell_data['plugins'] = [dogedock, switcher, dropped_from_management]
+    shell_data['disabledPlugins'] = ['omarchy.dock', 'fixture.disabled']
+    shell_data['cloneSourceRestores'] = ['harryxu.dogedock']
     shell_json.write_text(json.dumps(shell_data))
     command(shell_cmd)
     expected_shell = shell_data | {'bar': shell_data['bar'] | {'background': 'glassy'},
                                   'dock': shell_data['dock'] | {'autohide': True}}
     expected_shell['bar']['layout'] = shell_data['bar']['layout'] | {'right': []}
+    expected_shell['plugins'] = [
+        dogedock, switcher | {'options': {'delay': 100, 'preview': True}},
+        dropped_from_management, {'id': 'fixture.new'},
+    ]
     assert json.loads(shell_json.read_text()) == expected_shell
     assert all(path.read_bytes() == content for path, content in desktop_originals.items())
+    # Equivalent personal formatting does not trigger a rewrite or another backup.
+    shell_json.write_text(json.dumps(expected_shell))
     deployed_shell = shell_json.read_bytes()
-    command(shell_cmd)
+    backups = sorted(shell_json.parent.glob('shell.json.*~'))
+    stable_shell = command(shell_cmd)
+    assert re.search(r'changed=0\b', stable_shell), stable_shell
     assert shell_json.read_bytes() == deployed_shell, 'Shell preferences changed on a stable rerun'
+    assert sorted(shell_json.parent.glob('shell.json.*~')) == backups
     assert all(path.read_bytes() == content for path, content in desktop_originals.items()), \
         'Desktop deployment overwrote host font or monitor settings'
     assert not theme_command_marker.exists(), 'Shell deployment queried or switched the system theme'

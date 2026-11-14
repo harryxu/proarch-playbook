@@ -61,6 +61,7 @@ omarchy_overrides:
   # wallpapers:
   #   - src: /usr/share/omarchy/themes/tokyo-night/backgrounds/0-liftoff.webp
   #     name: spacex-liftoff.webp
+  # plugins: [] # Stop managing plugins. Existing Shell activations are preserved.
   shell:
     # Explicit bar settings here take precedence over the profile's widget placement.
     idle:
