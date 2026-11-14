@@ -63,10 +63,15 @@ account database rather than assumed to be `/home/<name>`.
 Profile selection configures the chosen environment. It does not uninstall
 another desktop, disable existing unrelated services, or migrate a running
 session. Both profiles use SDDM with the SilentSDDM `altumfish` preset and
-the same set of random login backgrounds. The shared theme tasks disable
-autologin so the login screen appears at boot. The KDE profile enables SDDM
-for the next boot by default. Set `kde_manage_display_manager: false` to
-keep the current display manager on KDE.
+the same set of random login backgrounds. On MacBooks where the playbook
+recognizes a password-protected LUKS boot, SDDM automatically starts the
+selected desktop for `target_user` after the disk unlock. Logging out still
+shows the SDDM greeter. The check recognizes the mkinitcpio `encrypt` hook
+in a booted unified kernel image with `cryptdevice=` and no keyfile. Other
+machines and unrecognized boot setups show the greeter. Reapply the playbook
+after changing how the system disk is unlocked. The KDE profile
+enables SDDM for the next boot by default. Set
+`kde_manage_display_manager: false` to keep the current display manager on KDE.
 
 ## Configuration layers
 

@@ -1,0 +1,57 @@
+---
+- name: Detect a MacBook with passphrase-only LUKS root unlock
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/files/sddm/macbook-luks-unlock.py"
+    executable: /usr/bin/python3
+  register: sddm_root_unlock
+  changed_when: false
+  check_mode: false
+
+- name: Find the installed session for the selected desktop profile
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    follow: true
+  loop: "{{ sddm_session_paths[desktop_profile] }}"
+  vars:
+    sddm_session_paths:
+      omarchy:
+        - /usr/local/share/wayland-sessions/omarchy.desktop
+        - /usr/share/wayland-sessions/omarchy.desktop
+      kde:
+        - /usr/share/wayland-sessions/plasma.desktop
+        - /usr/share/xsessions/plasmax11.desktop
+  register: sddm_desktop_sessions
+  when: sddm_root_unlock.stdout | trim == 'passphrase'
+
+- name: Resolve the SDDM autologin session
+  ansible.builtin.set_fact:
+    sddm_autologin_session: >-
+      {{ sddm_desktop_sessions.results
+         | selectattr('stat', 'defined') | selectattr('stat.isreg', 'defined')
+         | selectattr('stat.isreg') | map(attribute='item') | map('basename') | first | default('') }}
+
+- name: Select the desktop session and allow manual login after logout
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: Autologin
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
+  loop:
+    - option: Session
+      value: "{{ sddm_autologin_session }}"
+    - option: Relogin
+      value: 'false'
+  when: sddm_autologin_session | length > 0
+
+- name: Enable SDDM autologin only after supported MacBook disk unlock
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: Autologin
+    option: User
+    value: "{{ target_user if sddm_autologin_session | length > 0 else '' }}"
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
