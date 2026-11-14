@@ -3,8 +3,12 @@
   ansible.builtin.assert:
     that: desktop_profile == 'kde'
 
-- name: Configure KDE preferences and SDDM theme files
+- name: Configure KDE preferences
   ansible.builtin.import_tasks: config.yml
+
+- name: Configure the shared SDDM theme
+  ansible.builtin.import_tasks: ../../common/sddm_theme.yml
+  when: features.sddm_theme
 
 - name: Integrate the selected input method with KDE
   ansible.builtin.import_tasks: input_method.yml

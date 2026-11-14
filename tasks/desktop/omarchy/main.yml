@@ -1,4 +1,8 @@
 ---
+- name: Configure the shared SDDM theme
+  ansible.builtin.import_tasks: ../../common/sddm_theme.yml
+  when: features.sddm_theme
+
 - name: Configure Omarchy personal overrides as their owner
   become: true
   become_user: "{{ target_user }}"

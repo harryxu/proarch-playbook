@@ -1,0 +1,103 @@
+---
+- name: Install SilentSDDM and its dependencies
+  kewlfft.aur.aur:
+    use: yay
+    state: present
+    name: sddm-silent-theme
+  become: true
+  become_user: aur_builder
+
+- name: Copy SDDM silent theme background image
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/backgrounds/ristretto.jpg"
+    dest: /usr/share/sddm/themes/silent/backgrounds/random.jpg
+    force: false
+    mode: "0644"
+- name: Check if random-backgrounds directory exists
+  ansible.builtin.stat:
+    path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+  register: random_backgrounds_dir
+- name: Download and extract random-backgrounds
+  when:
+    - not random_backgrounds_dir.stat.exists
+    - not ansible_check_mode
+  block:
+    - name: Create a temporary directory for the background archive
+      ansible.builtin.tempfile:
+        state: directory
+        prefix: proarch-sddm-
+      register: sddm_background_download
+    - name: Download random-backgrounds.zip
+      ansible.builtin.get_url:
+        url: https://github.com/harryxu/proarch-playbook/releases/download/0.1/random-backgrounds.zip
+        dest: "{{ sddm_background_download.path }}/random-backgrounds.zip"
+        mode: "0644"
+    - name: Ensure random-backgrounds directory exists
+      ansible.builtin.file:
+        path: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+        state: directory
+        mode: "0755"
+    - name: Extract random-backgrounds.zip
+      ansible.builtin.unarchive:
+        src: "{{ sddm_background_download.path }}/random-backgrounds.zip"
+        dest: /usr/share/sddm/themes/silent/backgrounds/random-backgrounds
+        remote_src: true
+  always:
+    - name: Remove the temporary background archive
+      ansible.builtin.file:
+        path: "{{ sddm_background_download.path }}"
+        state: absent
+      when: sddm_background_download.path is defined
+- name: Copy randombg.sh to SDDM silent theme directory
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/randombg.sh"
+    dest: /usr/share/sddm/themes/silent/randombg.sh
+    mode: "0755"
+    force: true
+- name: Ensure systemd sddm.service drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/sddm.service.d
+    state: directory
+    mode: "0755"
+- name: Install systemd drop-in to run randombg.sh before SDDM
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/sddm.service.d/randombg.conf
+    mode: "0644"
+    content: "[Service]\nExecStartPre=/usr/share/sddm/themes/silent/randombg.sh\n"
+  notify: Reload systemd manager
+- name: Copy SDDM silent theme altumfish config
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/files/sddm/themes/silent/configs/altumfish.conf"
+    dest: /usr/share/sddm/themes/silent/configs/altumfish.conf
+    force: false
+    mode: "0644"
+- name: Update SDDM silent theme ConfigFile to altumfish.conf
+  community.general.ini_file:
+    path: /usr/share/sddm/themes/silent/metadata.desktop
+    section: SddmGreeterTheme
+    option: ConfigFile
+    value: configs/altumfish.conf
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
+
+# The main file takes precedence over the Omarchy and KDE drop-ins.
+- name: Select SilentSDDM and configure its Qt greeter
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: "{{ item.section }}"
+    option: "{{ item.option }}"
+    value: "{{ item.value }}"
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
+  loop:
+    - section: General
+      option: InputMethod
+      value: qtvirtualkeyboard
+    - section: General
+      option: GreeterEnvironment
+      value: QML2_IMPORT_PATH=/usr/share/sddm/themes/silent/components/,QT_IM_MODULE=qtvirtualkeyboard
+    - section: Theme
+      option: Current
+      value: silent

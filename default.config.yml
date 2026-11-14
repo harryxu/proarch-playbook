@@ -11,6 +11,7 @@ feature_defaults:
   dotconfig: true
   input_method: true
   rime_ice: true
+  sddm_theme: true
   cliphist: false
   vicinae: false
   bluetooth: false
@@ -42,7 +43,7 @@ dotconfig_paths:
   - tmux
   - zed
 
-# Login manager changes are opt-in and apply at the next boot/login.
+# Switching the display manager is opt-in and applies at the next boot/login.
 kde_manage_display_manager: false
 
 # Portable defaults; put hardware-specific values in config.yml.
