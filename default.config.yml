@@ -11,7 +11,6 @@ feature_defaults:
   dotconfig: true
   input_method: true
   rime_ice: true
-  sddm_theme: true
   cliphist: false
   vicinae: false
   bluetooth: false
@@ -44,8 +43,8 @@ dotconfig_paths:
   - tmux
   - zed
 
-# Switching the display manager is opt-in and applies at the next boot/login.
-kde_manage_display_manager: false
+# Use SDDM on KDE at the next boot.
+kde_manage_display_manager: true
 
 # Portable defaults; put hardware-specific values in config.yml.
 keyboard_type: mac

@@ -8,9 +8,10 @@ if [ ! -d "$BG_DIR" ]; then
     exit 0
 fi
 
-mapfile -t images < <(find "$BG_DIR" -maxdepth 1 -type f \( \
+# The release archive includes a top-level random-backgrounds directory.
+mapfile -d '' -t images < <(find "$BG_DIR" -type f \( \
     -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o \
-    -iname "*.webp" -o -iname "*.bmp" \) 2>/dev/null)
+    -iname "*.webp" -o -iname "*.bmp" \) -print0 2>/dev/null)
 
 if [ "${#images[@]}" -eq 0 ]; then
     exit 0

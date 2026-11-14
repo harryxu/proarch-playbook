@@ -9,7 +9,6 @@ feature_overrides:
   dotconfig: true
   input_method: true
   rime_ice: true # Both profiles; requires input_method.
-  sddm_theme: true # Both profiles: SilentSDDM with the altumfish preset.
   bluetooth: false
   snapper: false
   keybindings: false # xremap; KDE only
@@ -67,5 +66,5 @@ omarchy_overrides:
     idle:
       lock: 600
 
-# KDE only: enable SDDM for the next login without stopping this session.
-# kde_manage_display_manager: true
+# KDE only: set false to keep the current display manager.
+# kde_manage_display_manager: false

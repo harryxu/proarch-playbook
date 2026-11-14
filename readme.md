@@ -62,11 +62,11 @@ account database rather than assumed to be `/home/<name>`.
 
 Profile selection configures the chosen environment. It does not uninstall
 another desktop, disable existing unrelated services, or migrate a running
-session. Both profiles configure SilentSDDM with the `altumfish` preset and
-the same set of random login backgrounds. The theme takes effect the next
-time SDDM starts. Existing SDDM autologin and session settings are preserved.
-On KDE, switching the display manager to SDDM still requires
-`kde_manage_display_manager: true` and takes effect on the next boot.
+session. Both profiles use SDDM with the SilentSDDM `altumfish` preset and
+the same set of random login backgrounds. The shared theme tasks disable
+autologin so the login screen appears at boot. The KDE profile enables SDDM
+for the next boot by default. Set `kde_manage_display_manager: false` to
+keep the current display manager on KDE.
 
 ## Configuration layers
 
@@ -96,7 +96,6 @@ omarchy_overrides:
 | Docker, SSH, shared dotconfig | Enabled | Enabled |
 | Fcitx5 / Rime components | Enabled | Enabled |
 | Rime Ice personal preference | Enabled | Enabled |
-| SilentSDDM login theme | Enabled | Enabled |
 | Standalone cliphist and Vicinae services | Enabled, preserving the old playbook | Disabled; Omarchy supplies these integrations |
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
 | Snapper + GRUB integration | Opt-in | Opt-in only on a compatible Btrfs/GRUB host |

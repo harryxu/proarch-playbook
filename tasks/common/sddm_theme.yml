@@ -101,3 +101,13 @@
     - section: Theme
       option: Current
       value: silent
+
+- name: Disable SDDM autologin so the login screen appears at boot
+  community.general.ini_file:
+    path: /etc/sddm.conf
+    section: Autologin
+    option: User
+    value: ""
+    no_extra_spaces: true
+    backup: true
+    mode: "0644"
