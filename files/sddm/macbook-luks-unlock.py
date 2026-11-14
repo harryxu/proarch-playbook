@@ -22,7 +22,7 @@ def uses_luks_passphrase():
         return False
 
     args = Path('/proc/cmdline').read_text().split()
-    if any(arg.startswith(('cryptkey=', 'rd.luks.', 'initrd=')) for arg in args):
+    if any(arg.startswith(('cryptkey=', 'initrd=')) for arg in args):
         return False
     crypt_devices = [arg.removeprefix('cryptdevice=') for arg in args if arg.startswith('cryptdevice=')]
     if len(crypt_devices) != 1:
@@ -57,7 +57,13 @@ def uses_luks_passphrase():
                 line.removeprefix('./')
                 for line in output('lsinitcpio', '--list', '--nocolor', mount + image).splitlines()
             }
-            return 'hooks/encrypt' in members and not members & {'crypto_keyfile.bin', 'etc/crypttab'}
+            # Omarchy can pass both styles of LUKS arguments. The mkinitcpio
+            # encrypt hook ignores rd.luks.*; only the systemd generator uses them.
+            return 'hooks/encrypt' in members and not members & {
+                'crypto_keyfile.bin',
+                'etc/crypttab',
+                'usr/lib/systemd/system-generators/systemd-cryptsetup-generator',
+            }
     return False
 
 
