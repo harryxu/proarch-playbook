@@ -1,0 +1,40 @@
+---
+- name: Configure the desktop user's default browser
+  become: true
+  become_user: "{{ target_user }}"
+  vars:
+    chrome_browser_types:
+      - x-scheme-handler/http
+      - x-scheme-handler/https
+      - text/html
+  block:
+    # Omarchy forwards links to the browser selected in the generic list.
+    - name: Use Google Chrome for web links and HTML files
+      community.general.ini_file:
+        path: "{{ target_home }}/.config/mimeapps.list"
+        section: Default Applications
+        option: "{{ item }}"
+        value: google-chrome.desktop;
+        no_extra_spaces: true
+        backup: true
+        mode: '0644'
+      loop: "{{ chrome_browser_types }}"
+
+    - name: Check for an existing KDE-specific application list
+      ansible.builtin.stat:
+        path: "{{ target_home }}/.config/kde-mimeapps.list"
+        follow: true
+      register: kde_browser_overrides
+      when: desktop_profile == 'kde'
+
+    - name: Update existing KDE-specific browser overrides
+      community.general.ini_file:
+        path: "{{ target_home }}/.config/kde-mimeapps.list"
+        section: Default Applications
+        option: "{{ item }}"
+        value: google-chrome.desktop;
+        no_extra_spaces: true
+        backup: true
+        mode: '0644'
+      loop: "{{ chrome_browser_types }}"
+      when: kde_browser_overrides.stat.exists | default(false)

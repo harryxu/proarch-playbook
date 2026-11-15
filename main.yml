@@ -25,6 +25,10 @@
       when: features.dotconfig
       tags: [common, dotconfig]
 
+    - name: Set Google Chrome as the default browser
+      ansible.builtin.import_tasks: tasks/common/default_browser.yml
+      tags: [common, packages]
+
     - name: Configure shared input method components
       ansible.builtin.import_tasks: tasks/common/input_method.yml
       when: features.input_method
