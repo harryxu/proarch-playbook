@@ -2,6 +2,18 @@
 - name: Configure the shared SDDM theme
   ansible.builtin.import_tasks: ../../common/sddm_theme.yml
 
+- name: Check that Google Chrome is available before removing Chromium
+  ansible.builtin.stat:
+    path: /usr/bin/google-chrome-stable
+    follow: true
+  register: omarchy_chrome
+
+- name: Remove Omarchy's stock Chromium browser
+  community.general.pacman:
+    name: chromium
+    state: absent
+  when: omarchy_chrome.stat.executable | default(false)
+
 - name: Configure Omarchy personal overrides as their owner
   become: true
   become_user: "{{ target_user }}"

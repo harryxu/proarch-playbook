@@ -4,7 +4,9 @@ Configure a personal Arch Linux development environment with an explicitly
 selected **KDE** or **Omarchy** desktop profile. Both profiles share Git,
 Neovim, fish, terminal preferences, development tools, font packages, ordinary
 applications, Docker, and SSH. Both install Google Chrome from the AUR and set
-it as the desktop user's default for web links and HTML files.
+it as the desktop user's default for web links and HTML files. The Omarchy
+profile removes the stock Chromium package once Chrome is available. Chromium
+profiles and other data in the user's home are preserved.
 Install the base desktop before running this
 playbook; the Omarchy profile customizes an existing Omarchy installation.
 
