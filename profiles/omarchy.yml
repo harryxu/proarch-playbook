@@ -1,9 +1,9 @@
 ---
 # Desktop defaults; host configuration can override these explicitly.
 features: {}
+# Omarchy supplies its own JetBrainsMono Nerd Font variant.
 packages:
   - omasnap
-  - ttf-jetbrains-mono-nerd-basic
   - herdr
   - nwg-look
   # Dependencies for the dconf module that persists the GTK font preference.
