@@ -234,9 +234,12 @@ The maintained configuration includes:
 | --- | --- | --- |
 | `harryxu.dropspace` | https://github.com/harryxu/omarchy-dropspace | `HEAD` |
 | `harryxu.super-switcher` | https://github.com/harryxu/omarchy-super-switcher | `HEAD` |
+| `harryxu.dogedock` | https://github.com/harryxu/omarchy-dogedock | `HEAD` |
 
 Super Switcher enables macOS-style application switching with `Super+Tab` and
 `Super+Shift+Tab`. The plugin registers these shortcuts at runtime.
+DogeDock replaces the stock Dock and uses the same Dock preferences. Restart
+Omarchy Shell after the first deployment to load the replacement.
 
 `omarchy_overrides.plugins` replaces the profile's list of Ansible-managed
 plugins. Each entry requires `id` and `repo` (HTTPS). `version` is optional and defaults to `HEAD`
@@ -252,8 +255,9 @@ activation and files in place. Use Omarchy's plugin commands to disable or
 uninstall it.
 
 The playbook applies the profile's Shell preferences, host overrides, and
-enabled bar rules to the existing `shell.json`. Other keys, including plugin
-disable and clone metadata, are preserved. When the merged values already
+enabled bar rules to the existing `shell.json`. It records the Dock replacement
+so Omarchy can restore the stock Dock when DogeDock is disabled. Other plugin
+disable and clone entries are preserved. When the merged values already
 match, the file is left untouched. Changes to an existing file create a backup.
 
 The installed `hyprland.lua` bootstrap is retained and checked for the required

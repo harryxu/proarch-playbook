@@ -654,7 +654,11 @@ exit 0
                    'right': [managed_tray, weather, clock], 'tray': ['user.tray']},
     }
     assert shell_data['dock'] == shell_defaults['dock'] | {'autohide': True}
-    assert shell_data['plugins'] == [{'id': 'harryxu.dropspace'}, {'id': 'harryxu.super-switcher'}]
+    assert shell_data['plugins'] == [
+        {'id': 'harryxu.dropspace'}, {'id': 'harryxu.super-switcher'}, {'id': 'harryxu.dogedock'},
+    ]
+    assert shell_data['disabledPlugins'] == ['omarchy.dock']
+    assert shell_data['cloneSourceRestores'] == ['harryxu.dogedock']
     plugin_bar = app_home / '.config/omarchy/plugins/proarch.bar'
     assert json.loads((plugin_bar / 'manifest.json').read_text())['id'] == 'proarch.bar'
     assert 'layoutWidgets.sections.left.some' in (plugin_bar / 'Bar.qml').read_text()

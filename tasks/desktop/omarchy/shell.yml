@@ -35,6 +35,7 @@
                     | merge_omarchy_plugins(omarchy_settings.plugins)}) }}
     omarchy_shell_desired: >-
       {{ omarchy_shell_merged
+         | apply_dogedock_replacement(omarchy_settings.plugins)
          | apply_omarchy_bar_visibility(omarchy_settings.hide_superwhisper_tray_icon,
                                         omarchy_settings.disable_agents_panel) }}
   when: not omarchy_shell_file.stat.exists or omarchy_shell_desired != omarchy_shell_current

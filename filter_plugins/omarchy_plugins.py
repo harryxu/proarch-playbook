@@ -24,6 +24,27 @@ def merge_omarchy_plugins(current, managed):
     return entries
 
 
+def apply_dogedock_replacement(config, managed):
+    plugin_id = "harryxu.dogedock"
+    stock_id = "omarchy.dock"
+    disabled = config.get("disabledPlugins", [])
+    if not any(plugin["id"] == plugin_id for plugin in managed):
+        return config
+    if plugin_id in disabled or stock_id in disabled:
+        return config
+
+    # Match Omarchy's clone activation so disabling DogeDock restores the stock Dock.
+    restores = config.get("cloneSourceRestores", [])
+    return {
+        **config,
+        "disabledPlugins": [*disabled, stock_id],
+        "cloneSourceRestores": restores if plugin_id in restores else [*restores, plugin_id],
+    }
+
+
 class FilterModule:
     def filters(self):
-        return {"merge_omarchy_plugins": merge_omarchy_plugins}
+        return {
+            "merge_omarchy_plugins": merge_omarchy_plugins,
+            "apply_dogedock_replacement": apply_dogedock_replacement,
+        }
