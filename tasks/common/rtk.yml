@@ -1,0 +1,49 @@
+---
+# rtk-bin is installed with the shared AUR packages. These integrations make
+# Codex CLI and Antigravity rewrite shell commands through rtk in every
+# project; both agents pick the hooks up after their next restart.
+
+- name: Look for the Codex CLI RTK artifacts
+  ansible.builtin.stat:
+    path: "{{ target_home }}/{{ item }}"
+  loop:
+    - .codex/RTK.md
+    - .codex/hooks.json
+  register: rtk_codex_artifacts
+
+- name: Check whether Codex AGENTS.md references RTK
+  ansible.builtin.command:
+    argv: [grep, -q, RTK.md, "{{ target_home }}/.codex/AGENTS.md"]
+  register: rtk_codex_reference
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Enable RTK for Codex CLI
+  ansible.builtin.command:
+    argv: [rtk, init, -g, --codex]
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+  when: >-
+    rtk_codex_artifacts.results | selectattr('stat.exists') | list | length < 2
+    or rtk_codex_reference.rc != 0
+
+- name: Look for the Antigravity RTK plugin files
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.gemini/config/plugins/rtk/{{ item }}"
+  loop:
+    - plugin.json
+    - hooks.json
+    - rules/AGENTS.md
+  register: rtk_antigravity_plugin
+
+- name: Enable RTK for Antigravity
+  ansible.builtin.command:
+    argv: [rtk, init, -g, --agent, antigravity]
+  become: true
+  become_user: "{{ target_user }}"
+  environment:
+    HOME: "{{ target_home }}"
+  when: rtk_antigravity_plugin.results | selectattr('stat.exists') | list | length < 3

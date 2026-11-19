@@ -46,3 +46,4 @@ common_packages:
 common_aur_packages:
   - google-chrome
   - crow-translate
+  - rtk-bin

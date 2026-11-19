@@ -25,6 +25,10 @@
       when: features.dotconfig
       tags: [common, dotconfig]
 
+    - name: Enable RTK for coding agents
+      ansible.builtin.import_tasks: tasks/common/rtk.yml
+      tags: [common, rtk]
+
     - name: Set Google Chrome as the default browser
       ansible.builtin.import_tasks: tasks/common/default_browser.yml
       tags: [common, packages]
