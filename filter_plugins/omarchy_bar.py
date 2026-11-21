@@ -17,6 +17,8 @@ def place_omarchy_bar_widgets(config):
     visible_widgets = left + right + center
     indicators = [entry for entry in visible_widgets if widget_id(entry) == "omarchy.indicators"]
     clocks = [entry for entry in visible_widgets if widget_id(entry) == "omarchy.clock"]
+    if not clocks:
+        clocks = [{"id": "omarchy.clock", "format": "ddd d MMM HH:mm"}]
     relocated_ids = {"omarchy.indicators", "omarchy.clock"}
     left = [entry for entry in left if widget_id(entry) not in relocated_ids]
     right = [entry for entry in right + center if widget_id(entry) not in relocated_ids]
