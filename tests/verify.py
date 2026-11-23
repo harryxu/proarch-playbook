@@ -694,6 +694,13 @@ exit 0
     assert shell_data['bar']['id'] == 'proarch.bar'
     assert shell_data['bar']['layout']['left'][2] == indicators
     assert shell_data['bar']['layout']['right'] == [managed_tray, weather, clock]
+    shell_data['bar']['layout']['right'].remove(clock)
+    shell_json.write_text(json.dumps(shell_data))
+    command(shell_cmd)
+    restored_clock = {'id': 'omarchy.clock', 'format': 'ddd d MMM HH:mm'}
+    assert json.loads(shell_json.read_text())['bar']['layout']['right'] == [
+        managed_tray, weather, restored_clock,
+    ]
     deployed_shell = shell_json.read_bytes()
     stable_shell = command(shell_cmd)
     assert re.search(r'changed=0\b', stable_shell), stable_shell
