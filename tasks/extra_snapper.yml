@@ -18,6 +18,20 @@
   changed_when: false
   failed_when: snapper_configs.rc != 0 or 'root,/' not in snapper_configs.stdout_lines
 
+- name: Apply the root snapshot retention policy
+  ansible.builtin.lineinfile:
+    path: /etc/snapper/configs/root
+    regexp: '^\s*{{ item.key }}\s*='
+    line: '{{ item.key }}="{{ item.value }}"'
+  loop:
+    - { key: NUMBER_CLEANUP, value: 'yes' }
+    - { key: NUMBER_MIN_AGE, value: '0' }
+    - { key: NUMBER_LIMIT, value: '5' }
+    - { key: NUMBER_LIMIT_IMPORTANT, value: '5' }
+    - { key: TIMELINE_CREATE, value: 'no' }
+  loop_control:
+    label: "{{ item.key }}"
+
 - name: Enable pre and post Pacman transaction snapshots for root
   community.general.ini_file:
     path: /etc/snap-pac.ini
@@ -39,37 +53,21 @@
           - inotify-tools
         state: present
 
-    - name: Ensure timeline snapshots are enabled in the root config
-      ansible.builtin.lineinfile:
-        path: /etc/snapper/configs/root
-        regexp: ^TIMELINE_CREATE=
-        line: TIMELINE_CREATE="yes"
-        state: present
-
     - name: Enable and start the grub-btrfsd service
       ansible.builtin.systemd_service:
         name: grub-btrfsd.service
         enabled: true
         state: started
 
-    - name: Enable and start snapper-timeline.timer
-      ansible.builtin.systemd:
-        name: snapper-timeline.timer
-        enabled: true
-        state: started
-
-    - name: Enable and start snapper-cleanup.timer
-      ansible.builtin.systemd:
-        name: snapper-cleanup.timer
-        enabled: true
-        state: started
-
-- name: Enable snapshot cleanup and Limine synchronization
+- name: Enable and start snapshot cleanup
   ansible.builtin.systemd_service:
-    name: "{{ item }}"
+    name: snapper-cleanup.timer
     enabled: true
     state: started
-  loop:
-    - snapper-cleanup.timer
-    - limine-snapper-sync.service
+
+- name: Enable and start Limine snapshot synchronization
+  ansible.builtin.systemd_service:
+    name: limine-snapper-sync.service
+    enabled: true
+    state: started
   when: snapper_active_bootloader == 'limine'

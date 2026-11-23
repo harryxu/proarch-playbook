@@ -154,10 +154,14 @@ installs the hooks and sets `snapshot = True` under `[root]` in
 `/etc/snap-pac.ini` before changing shared or desktop packages. The transaction
 that first installs the hooks cannot create its own pre-snapshot.
 
-GRUB uses the existing `/boot/grub/grub.cfg` and configures timeline snapshots
-and boot menu entries. Limine requires an existing Snapper root configuration
-and the `limine-snapper-sync` service. It enables snapshot cleanup and boot entry
-synchronization using the host's snapshot policy.
+Both bootloaders use the same root snapshot policy. The playbook enables
+number-based cleanup, sets both number limits to 5 with no minimum age, and
+disables automatic timeline snapshots for `/`. It enables
+`snapper-cleanup.timer` for periodic cleanup.
+
+GRUB uses the existing `/boot/grub/grub.cfg` and synchronizes boot menu entries
+with `grub-btrfsd`. Limine requires an existing Snapper root configuration and
+uses `limine-snapper-sync` to synchronize boot menu entries.
 
 xremap is installed only with `desktop_profile: kde` and
 `feature_overrides.keybindings: true`. Its task entry point also requires KDE,
