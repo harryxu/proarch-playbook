@@ -339,6 +339,7 @@ end
         assert data['profile'] == profile
         assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
         assert data['features']['rime_ice'] is True
+        assert data['features']['snapper'] is True
         assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
 

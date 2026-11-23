@@ -56,6 +56,9 @@
     - name: Deploy personal Hyprland overrides
       ansible.builtin.include_tasks: hyprland.yml
 
+    - name: Configure Omarchy low VRAM mode
+      ansible.builtin.include_tasks: low_vram.yml
+
     - name: Keep application themes independent of the desktop
       ansible.builtin.include_tasks: app_themes.yml
       when: omarchy_settings.independent_app_themes

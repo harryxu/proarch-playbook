@@ -6,13 +6,6 @@
       tags: [features]
   when: features.bluetooth
 
-- name: Configure the optional Snapper integration
-  ansible.builtin.include_tasks:
-    file: ../extra_snapper.yml
-    apply:
-      tags: [features]
-  when: features.snapper
-
 - name: Configure the optional KDE input remapping integration
   ansible.builtin.include_tasks:
     file: ../extra_keybindings.yml

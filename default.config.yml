@@ -14,7 +14,7 @@ feature_defaults:
   cliphist: false
   vicinae: false
   bluetooth: false
-  snapper: false
+  snapper: true
   keybindings: false
   apfs_automount: false
   t2_luks_keyboard_workaround: false

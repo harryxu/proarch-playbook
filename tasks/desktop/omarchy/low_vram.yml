@@ -1,0 +1,31 @@
+---
+- name: Detect the largest reported GPU memory capacity in bytes
+  ansible.builtin.shell: |
+    {
+      for capacity in /sys/class/drm/card[0-9]*/device/mem_info_vram_total; do
+        if [[ -r "$capacity" ]]; then
+          cat "$capacity"
+        fi
+      done
+      if command -v nvidia-smi >/dev/null; then
+        if capacities=$(timeout 5s nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null); then
+          awk '/^[[:space:]]*[0-9]+[[:space:]]*$/ { printf "%.0f\n", $1 * 1048576 }' <<< "$capacities"
+        fi
+      fi
+    } | awk '/^[0-9]+$/ && $1 > max { max = $1 } END { printf "%.0f\n", max }'
+  args:
+    executable: /bin/bash
+  register: omarchy_vram_bytes
+  changed_when: false
+  check_mode: false
+
+- name: Enable Omarchy's low VRAM mode at 2 GiB or less
+  ansible.builtin.shell: |
+    omarchy toggle animations off
+    # The desktop notification can fail outside a session. Verify the saved toggle.
+    test -f "$HOME/.local/state/omarchy/toggles/hypr/no-animations.lua"
+  args:
+    creates: "{{ target_home }}/.local/state/omarchy/toggles/hypr/no-animations.lua"
+  when:
+    - omarchy_vram_bytes.stdout | int > 0
+    - omarchy_vram_bytes.stdout | int <= 2147483648

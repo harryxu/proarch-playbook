@@ -90,7 +90,6 @@ target_user: harry
 feature_overrides:
   docker: true
   bluetooth: false
-  snapper: false
   keybindings: false
 extra_packages: []
 extra_aur_packages: []
@@ -107,7 +106,7 @@ omarchy_overrides:
 | Rime Ice personal preference | Enabled | Enabled |
 | Standalone cliphist and Vicinae services | Enabled, preserving the old playbook | Disabled; Omarchy supplies these integrations |
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
-| Snapper snapshots on Btrfs | Opt-in with GRUB or Limine | Opt-in with GRUB or Limine |
+| Snapper snapshots on Btrfs | Enabled with GRUB or Limine | Enabled with GRUB or Limine |
 | KDE xremap integration | Opt-in | Unsupported; use Hyprland integration |
 | USB APFS automount | Unsupported by this playbook | Opt-in, read-only |
 | Intel Titan Ridge USB hotplug workaround on matching T2 Macs | Automatic | Automatic |
@@ -120,17 +119,25 @@ are session migration actions rather than automatic profile cleanup. The old
 playbook-owned Fcitx desktop autostart is recognized and disabled when native
 input integration is configured.
 
-Set `feature_overrides.snapper: true` to enable the snapshot integration on a
-host with a Btrfs root filesystem. Both desktop profiles select the integration
-using the bootloader reported by UEFI or identified from the firmware's current
-boot entry. When automatic detection is inconclusive, such as on a legacy BIOS
-installation, set `snapper_bootloader: grub` or `snapper_bootloader: limine`
-in `config.yml` to match the host.
+Snapper is enabled by default for both profiles and requires a Btrfs root
+filesystem with GRUB or Limine. Set `feature_overrides.snapper: false` in
+`config.yml` to skip Snapper on hosts without a compatible setup. The playbook
+selects the integration using the bootloader reported by UEFI or identified
+from the firmware's current boot entry. When automatic detection is
+inconclusive, such as on a legacy BIOS installation, set `snapper_bootloader: grub`
+or `snapper_bootloader: limine` in `config.yml` to match the host.
 
-GRUB uses the existing `/boot/grub/grub.cfg` and configures timeline snapshots,
-Pacman transaction snapshots, and boot menu entries. Limine requires an existing
-Snapper root configuration and the `limine-snapper-sync` service. It enables
-snapshot cleanup and boot entry synchronization using the host's snapshot policy.
+Both bootloaders use [snap-pac](https://man.archlinux.org/man/snap-pac.8) to create
+a pair of root snapshots around each Pacman transaction that installs, upgrades,
+or removes packages. This includes AUR helpers that invoke Pacman. The playbook
+installs the hooks and sets `snapshot = True` under `[root]` in
+`/etc/snap-pac.ini` before changing shared or desktop packages. The transaction
+that first installs the hooks cannot create its own pre-snapshot.
+
+GRUB uses the existing `/boot/grub/grub.cfg` and configures timeline snapshots
+and boot menu entries. Limine requires an existing Snapper root configuration
+and the `limine-snapper-sync` service. It enables snapshot cleanup and boot entry
+synchronization using the host's snapshot policy.
 
 xremap is installed only with `desktop_profile: kde` and
 `feature_overrides.keybindings: true`. Its task entry point also requires KDE,
@@ -213,6 +220,10 @@ The maintained configuration includes:
   replacing the audio panel shortcut. Flameshot is installed only by the KDE
   profile; existing packages are not automatically removed.
 - Glassy top bar, world clocks, dock pins, a ten-minute lock, and disabled screensaver.
+- Low VRAM mode runs `omarchy toggle animations off` when the largest reported
+  GPU memory capacity is at most 2 GiB. The playbook reads AMDGPU sysfs and
+  `nvidia-smi` when available. If neither reports a usable capacity, or a GPU
+  reports more than 2 GiB, it leaves the current setting alone.
 - The top bar puts a lightning icon for status indicators immediately after the
   workspaces, moves the middle widgets to the right, and puts the clock last.
   The profile builds its user-owned bar from the installed Omarchy bar and

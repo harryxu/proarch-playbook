@@ -1,39 +1,64 @@
 ---
-- name: Configure snapshots with Snapper and GRUB
+- name: Install Snapper and its Pacman transaction hooks
+  community.general.pacman:
+    name:
+      - snapper
+      - snap-pac
+    state: present
+
+- name: Create the Snapper root configuration on GRUB hosts
+  ansible.builtin.command: snapper -c root create-config /
+  args:
+    creates: /etc/snapper/configs/root
   when: snapper_active_bootloader == 'grub'
-  vars:
-    snapper_config_name: root
-    snapper_config_path: /etc/snapper/configs/{{ snapper_config_name }}
+
+- name: Verify that Snapper has registered the root filesystem
+  ansible.builtin.command: snapper --no-dbus --csvout list-configs
+  register: snapper_configs
+  changed_when: false
+  failed_when: snapper_configs.rc != 0 or 'root,/' not in snapper_configs.stdout_lines
+
+- name: Enable pre and post Pacman transaction snapshots for root
+  community.general.ini_file:
+    path: /etc/snap-pac.ini
+    section: root
+    option: snapshot
+    value: "True"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: true
+
+- name: Configure the GRUB snapshot integration
+  when: snapper_active_bootloader == 'grub'
   block:
-    - name: 1. Install Snapper, snap-pac, and grub-btrfs
+    - name: Install the GRUB snapshot integration
       community.general.pacman:
         name:
-          - snapper
-          - snap-pac
           - grub-btrfs
           - inotify-tools
         state: present
-    - name: 2. Create Snapper config for the root subvolume
-      ansible.builtin.command: snapper -c {{ snapper_config_name }} create-config /
-      args:
-        creates: "{{ snapper_config_path }}"
-    - name: 3. Ensure timeline snapshots are enabled in the root config
+
+    - name: Ensure timeline snapshots are enabled in the root config
       ansible.builtin.lineinfile:
-        path: "{{ snapper_config_path }}"
+        path: /etc/snapper/configs/root
         regexp: ^TIMELINE_CREATE=
         line: TIMELINE_CREATE="yes"
         state: present
-    - name: 4. Enable and start the grub-btrfsd service
+
+    - name: Enable and start the grub-btrfsd service
       ansible.builtin.systemd_service:
         name: grub-btrfsd.service
         enabled: true
         state: started
-    - name: 5. Enable and start snapper-timeline.timer
+
+    - name: Enable and start snapper-timeline.timer
       ansible.builtin.systemd:
         name: snapper-timeline.timer
         enabled: true
         state: started
-    - name: 6. Enable and start snapper-cleanup.timer
+
+    - name: Enable and start snapper-cleanup.timer
       ansible.builtin.systemd:
         name: snapper-cleanup.timer
         enabled: true

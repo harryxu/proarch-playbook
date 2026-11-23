@@ -16,6 +16,11 @@
       tags: [always]
 
   tasks:
+    - name: Configure Snapper before changing shared or desktop packages
+      ansible.builtin.import_tasks: tasks/extra_snapper.yml
+      when: features.snapper
+      tags: [features]
+
     - name: Configure shared packages and system services
       ansible.builtin.import_tasks: tasks/common/system.yml
       tags: [common, packages]
