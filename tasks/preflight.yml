@@ -70,23 +70,6 @@
   ansible.builtin.include_tasks: desktop/omarchy/preflight.yml
   when: desktop_profile == 'omarchy'
 
-- name: Gather mount facts for the optional snapshot integration
-  ansible.builtin.setup:
-    gather_subset: [mounts]
-  when: features.snapper
-
-- name: Check the optional Snapper integration's bootloader
-  ansible.builtin.stat:
-    path: /boot/grub/grub.cfg
-  register: grub_config
-  when: features.snapper
-
-- name: Require the supported Btrfs and GRUB snapshot setup
-  ansible.builtin.assert:
-    that:
-      - grub_config.stat.exists
-      - ansible_facts.mounts | selectattr('mount', 'equalto', '/') | map(attribute='fstype') | first == 'btrfs'
-    fail_msg: >-
-      The legacy Snapper integration requires Btrfs and GRUB.
-      Leave it disabled on an Omarchy system with its own snapshot setup.
+- name: Check the prerequisites for Snapper
+  ansible.builtin.import_tasks: features/snapper_preflight.yml
   when: features.snapper

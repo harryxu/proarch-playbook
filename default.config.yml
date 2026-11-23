@@ -19,6 +19,7 @@ feature_defaults:
   apfs_automount: false
   t2_luks_keyboard_workaround: false
 feature_overrides: {}
+snapper_bootloader: auto
 extra_packages: []
 extra_aur_packages: []
 omarchy_overrides: {}

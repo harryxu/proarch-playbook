@@ -6,7 +6,7 @@
       tags: [features]
   when: features.bluetooth
 
-- name: Configure the optional GRUB and Btrfs snapshot integration
+- name: Configure the optional Snapper integration
   ansible.builtin.include_tasks:
     file: ../extra_snapper.yml
     apply:

@@ -10,13 +10,16 @@ feature_overrides:
   input_method: true
   rime_ice: true # Both profiles; requires input_method.
   bluetooth: false
-  snapper: false
+  snapper: false # Both profiles on Btrfs with GRUB or Limine.
   keybindings: false # xremap; KDE only
   apfs_automount: false # Omarchy only; automatically mount USB APFS volumes read-only.
   t2_luks_keyboard_workaround: false # Affected Omarchy T2 Macs only. See docs/omarchy-t2-luks-keyboard.md.
   # Uncomment to override the selected profile's defaults:
   # cliphist: false   # KDE: true; Omarchy: must remain false.
   # vicinae: false    # KDE: true; Omarchy: must remain false.
+
+# Set grub or limine if automatic detection cannot identify the running bootloader.
+# snapper_bootloader: auto
 
 # Additional software alongside the shared and desktop package lists.
 extra_packages: []     # Official Arch packages, e.g. [jq, tree].

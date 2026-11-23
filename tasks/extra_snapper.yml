@@ -1,5 +1,6 @@
 ---
-- name: Configure Btrfs snapshots with Snapper
+- name: Configure snapshots with Snapper and GRUB
+  when: snapper_active_bootloader == 'grub'
   vars:
     snapper_config_name: root
     snapper_config_path: /etc/snapper/configs/{{ snapper_config_name }}
@@ -37,3 +38,13 @@
         name: snapper-cleanup.timer
         enabled: true
         state: started
+
+- name: Enable snapshot cleanup and Limine synchronization
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - snapper-cleanup.timer
+    - limine-snapper-sync.service
+  when: snapper_active_bootloader == 'limine'

@@ -1,0 +1,71 @@
+---
+- name: Gather mount facts for Snapper
+  ansible.builtin.setup:
+    gather_subset: [mounts]
+
+- name: Require a Btrfs root filesystem for Snapper
+  ansible.builtin.assert:
+    that:
+      - (ansible_facts.mounts | selectattr('mount', 'equalto', '/') | map(attribute='fstype') | first | default('')) == 'btrfs'
+    fail_msg: Snapper requires a Btrfs root filesystem.
+
+- name: Validate the Snapper bootloader setting
+  ansible.builtin.assert:
+    that: snapper_bootloader in ['auto', 'grub', 'limine']
+    fail_msg: Set snapper_bootloader to auto, grub, or limine.
+
+- name: Detect the bootloader used to start the running system
+  ansible.builtin.script:
+    cmd: "{{ playbook_dir }}/files/snapper/detect-bootloader.py"
+    executable: /usr/bin/python3
+  register: snapper_bootloader_probe
+  changed_when: false
+  check_mode: false
+  when: snapper_bootloader == 'auto'
+
+- name: Resolve the bootloader for Snapper
+  ansible.builtin.set_fact:
+    snapper_active_bootloader: >-
+      {{ (snapper_bootloader_probe.stdout | trim)
+         if snapper_bootloader == 'auto' else snapper_bootloader }}
+
+- name: Require a supported bootloader for Snapper
+  ansible.builtin.assert:
+    that: snapper_active_bootloader in ['grub', 'limine']
+    fail_msg: >-
+      Could not identify GRUB or Limine as the running bootloader.
+      If the host uses one of them, set snapper_bootloader to grub or limine in config.yml.
+
+- name: Check the GRUB configuration for Snapper
+  when: snapper_active_bootloader == 'grub'
+  block:
+    - name: Look for the installed GRUB configuration
+      ansible.builtin.stat:
+        path: /boot/grub/grub.cfg
+        follow: true
+      register: grub_config
+
+    - name: Require the installed GRUB configuration
+      ansible.builtin.assert:
+        that: grub_config.stat.isreg | default(false)
+        fail_msg: The GRUB Snapper integration requires /boot/grub/grub.cfg.
+
+- name: Check the Limine snapshot setup
+  when: snapper_active_bootloader == 'limine'
+  block:
+    - name: Look for the Snapper root configuration and Limine sync service
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: true
+      loop:
+        - /etc/snapper/configs/root
+        - /usr/lib/systemd/system/limine-snapper-sync.service
+      register: limine_snapper_files
+
+    - name: Require the installed Limine snapshot files
+      ansible.builtin.assert:
+        that: item.stat.isreg | default(false)
+        fail_msg: "The Limine Snapper integration requires {{ item.item }}."
+      loop: "{{ limine_snapper_files.results }}"
+      loop_control:
+        label: "{{ item.item }}"

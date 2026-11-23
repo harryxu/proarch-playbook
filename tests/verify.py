@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import shlex
 import shutil
 import subprocess
@@ -28,6 +29,24 @@ def command(args, **kwargs):
 
 with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     work = Path(temporary)
+    bootloader_probe = runpy.run_path(str(ROOT / 'files/snapper/detect-bootloader.py'))
+    efi_entries = r"""
+BootOrder: 0001,0002,0003
+Boot0001* GRUB HD(1,GPT,...)/File(\EFI\GRUB\grubx64.efi)
+Boot0002* Limine HD(1,GPT,...)/File(\EFI\limine\BOOTX64.EFI)
+Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
+"""
+    for entry, expected in [('0001', 'grub'), ('0002', 'limine'), ('0003', 'unknown'),
+                            ('0004', 'unknown')]:
+        assert bootloader_probe['bootloader_from_efi_entries'](
+            f'BootCurrent: {entry}\n' + efi_entries) == expected
+    assert bootloader_probe['bootloader_from_efi_entries'](efi_entries) == 'unknown'
+    loader_info = work / 'LoaderInfo'
+    for product, expected in [('Limine 12.0', 'limine'), ('GRUB 2.14', 'grub'),
+                              ('systemd-boot 259', 'unknown')]:
+        loader_info.write_bytes(b'\x06\0\0\0' + (product + '\0').encode('utf-16-le'))
+        assert bootloader_probe['detect_bootloader'](loader_info) == expected
+
     (work / 'profiles').symlink_to(ROOT / 'profiles', target_is_directory=True)
     (work / 'files').symlink_to(ROOT / 'files', target_is_directory=True)
     (work / 'templates').symlink_to(ROOT / 'templates', target_is_directory=True)
