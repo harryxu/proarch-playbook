@@ -18,6 +18,42 @@
   changed_when: false
   failed_when: snapper_configs.rc != 0 or 'root,/' not in snapper_configs.stdout_lines
 
+- name: Set the Limine snapshot menu limit
+  ansible.builtin.lineinfile:
+    path: /etc/default/limine
+    regexp: '^\s*MAX_SNAPSHOT_ENTRIES\s*='
+    line: MAX_SNAPSHOT_ENTRIES=24
+    create: true
+    backup: true
+  when: snapper_active_bootloader == 'limine'
+
+- name: Ensure the Snapper timeline timer drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/snapper-timeline.timer.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Set the Snapper timeline timer to run daily
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/snapper-timeline.timer.d/90-proarch-daily.conf
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Timer]
+      OnCalendar=
+      OnCalendar=*-*-* 15:30:00
+  register: snapper_timeline_schedule
+
+- name: Enable and start daily timeline snapshots
+  ansible.builtin.systemd_service:
+    name: snapper-timeline.timer
+    daemon_reload: true
+    enabled: true
+    state: "{{ 'restarted' if snapper_timeline_schedule.changed else 'started' }}"
+
 - name: Apply the root snapshot retention policy
   ansible.builtin.lineinfile:
     path: /etc/snapper/configs/root
@@ -26,9 +62,16 @@
   loop:
     - { key: NUMBER_CLEANUP, value: 'yes' }
     - { key: NUMBER_MIN_AGE, value: '0' }
-    - { key: NUMBER_LIMIT, value: '5' }
+    - { key: NUMBER_LIMIT, value: '10' }
     - { key: NUMBER_LIMIT_IMPORTANT, value: '5' }
-    - { key: TIMELINE_CREATE, value: 'no' }
+    - { key: TIMELINE_CREATE, value: 'yes' }
+    - { key: TIMELINE_CLEANUP, value: 'yes' }
+    - { key: TIMELINE_LIMIT_HOURLY, value: '0' }
+    - { key: TIMELINE_LIMIT_DAILY, value: '5' }
+    - { key: TIMELINE_LIMIT_WEEKLY, value: '0' }
+    - { key: TIMELINE_LIMIT_MONTHLY, value: '0' }
+    - { key: TIMELINE_LIMIT_QUARTERLY, value: '0' }
+    - { key: TIMELINE_LIMIT_YEARLY, value: '0' }
   loop_control:
     label: "{{ item.key }}"
 

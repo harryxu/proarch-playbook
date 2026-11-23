@@ -155,13 +155,20 @@ installs the hooks and sets `snapshot = True` under `[root]` in
 that first installs the hooks cannot create its own pre-snapshot.
 
 Both bootloaders use the same root snapshot policy. The playbook enables
-number-based cleanup, sets both number limits to 5 with no minimum age, and
-disables automatic timeline snapshots for `/`. It enables
-`snapper-cleanup.timer` for periodic cleanup.
+number-based cleanup with a limit of 10 for `NUMBER_LIMIT` and 5 for
+`NUMBER_LIMIT_IMPORTANT`, with no minimum age. For timeline snapshots, it
+retains one per day for the latest five dates with snapshots. The playbook
+enables the stock `snapper-timeline.timer` and sets it to run daily at 15:30
+local time for all Snapper configurations that enable timeline creation.
+The timer skips missed runs while the machine is powered off.
+`snapper-cleanup.timer` runs periodic cleanup for both snapshot types.
 
 GRUB uses the existing `/boot/grub/grub.cfg` and synchronizes boot menu entries
 with `grub-btrfsd`. Limine requires an existing Snapper root configuration and
-uses `limine-snapper-sync` to synchronize boot menu entries.
+uses `limine-snapper-sync` to synchronize boot menu entries. The playbook sets
+`MAX_SNAPSHOT_ENTRIES=24` in `/etc/default/limine`. During frequent package
+transactions, Snapper can retain more snapshots than Limine displays. The boot
+partition usage limit can also reduce the number of entries.
 
 xremap is installed only with `desktop_profile: kde` and
 `feature_overrides.keybindings: true`. Its task entry point also requires KDE,
