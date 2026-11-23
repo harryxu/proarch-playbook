@@ -3,3 +3,5 @@ local:
     127.0.0.1
   vars:
     ansible_connection: local
+    # sudo can wait for fingerprint authentication before offering a password prompt.
+    ansible_local_become_success_timeout: 60

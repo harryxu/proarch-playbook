@@ -24,6 +24,7 @@
   ansible.builtin.getent:
     database: passwd
     key: "{{ target_user }}"
+  become: false
 
 - name: Resolve target paths
   ansible.builtin.set_fact:
@@ -41,13 +42,15 @@
 - name: Check for the user's session bus
   ansible.builtin.stat:
     path: "/run/user/{{ target_uid }}/bus"
+  become: "{{ connection_username.stdout != target_user }}"
+  become_user: "{{ target_user }}"
   register: user_bus
 
 - name: Check whether a graphical session is active
   ansible.builtin.systemd_service:
     name: graphical-session.target
     scope: user
-  become: true
+  become: "{{ connection_username.stdout != target_user }}"
   become_user: "{{ target_user }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ target_uid }}"
@@ -67,7 +70,10 @@
          and connection_username.stdout == target_user }}
 
 - name: Check Omarchy capabilities before shared tasks run
-  ansible.builtin.include_tasks: desktop/omarchy/preflight.yml
+  ansible.builtin.include_tasks:
+    file: desktop/omarchy/preflight.yml
+    apply:
+      become: false
   when: desktop_profile == 'omarchy'
 
 - name: Check the prerequisites for Snapper

@@ -74,6 +74,8 @@
 - name: Preserve Omarchy's bootstrap and verify user override imports
   ansible.builtin.slurp:
     src: "{{ target_home }}/.config/hypr/hyprland.lua"
+  become: "{{ connection_username.stdout != target_user }}"
+  become_user: "{{ target_user }}"
   register: hyprland_entry
 
 - name: Require the installed personal Lua entry point

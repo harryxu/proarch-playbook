@@ -39,9 +39,9 @@ After editing `config.yml`, you can use the bootstrap script:
 It installs Ansible through pacman when needed, installs the roles and collections
 declared in `requirements.yml`, checks that `config.yml` exists, then runs
 `ansible-playbook main.yml`. If the config is missing, it prints setup instructions
-and exits. Run the script as your desktop user; it uses sudo only to install
-Ansible. Additional arguments are forwarded to the playbook, for example
-`./start.sh --check --diff`.
+and exits. Run the script as your desktop user. If the bootstrap needs to
+install Ansible, it uses `sudo` for that step. Additional arguments such as
+`./start.sh --check --diff` are forwarded to the playbook.
 
 An explicit command-line choice also works:
 
@@ -60,9 +60,29 @@ ansible-playbook main.yml
 Check mode is a preview, not a complete first-install simulation: a checkout or
 package skipped by check mode cannot supply files or tools for later tasks.
 Recheck after prerequisites exist. Privilege escalation uses the existing
-Ansible password prompt. Set `target_user` explicitly when the connection user
-is not the intended desktop user; the user's home is resolved from the system
-account database rather than assumed to be `/home/<name>`.
+Ansible password prompt. The bundled local inventory allows 60 seconds for
+`sudo` to authenticate or show its password prompt. This gives fingerprint
+authentication time to fall back to the password supplied to Ansible. If you
+connect as a different account from your desktop user, set `target_user`
+explicitly. The playbook looks up the user's home in the system account database.
+
+### Password-only sudo for local runs
+
+If sudo waits for a fingerprint before accepting the Ansible password, install
+the optional sudo configuration once and select it for local runs:
+
+```sh
+./start.sh --install-password-sudo
+./start.sh --password-sudo
+```
+
+The installation uses your current sudo authentication. It installs a separate
+PAM service for the playbook's sudo command and relies on your existing sudo
+permissions. The system's regular sudo, lock-screen, and desktop authentication
+keep their own settings. The configuration is shared by future runs, so there is
+no per-run authentication change to restore after an error or interruption.
+Pass Ansible arguments after `--password-sudo`. On other machines or when using
+a remote inventory, run `./start.sh` as usual.
 
 Profile selection configures the chosen environment. It does not uninstall
 another desktop, disable existing unrelated services, or migrate a running
