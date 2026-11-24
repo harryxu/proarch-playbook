@@ -3,10 +3,10 @@
 hl.config({
   general = {
     resize_on_border = true,
-    gaps_in = 0,
+    gaps_in = 2.5,
     gaps_out = 0,
-    border_size = 3,
-  }
+    border_size = 1,
+  },
 })
 
 -- https://wiki.hypr.land/Configuring/Basics/Variables/#general
