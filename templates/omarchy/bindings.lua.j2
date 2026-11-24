@@ -74,7 +74,11 @@ end
 -- Change an existing binding by unbinding it first, then binding the key again.
 -- This example changes SUPER+SPACE from the launcher to the Omarchy root menu.
 -- hl.unbind("SUPER + SPACE")
+{% if features.vicinae %}
+o.rebind("SUPER + e", "Vicinae", "vicinae toggle")
+{% else %}
 o.bind("SUPER + e", "Omarchy menu", "omarchy-menu toggle root")
+{% endif %}
 
 -- Logitech MX Keys examples:
 -- o.bind("SUPER + H", nil, "voxtype record toggle")

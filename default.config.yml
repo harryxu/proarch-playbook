@@ -11,7 +11,7 @@ feature_defaults:
   dotconfig: true
   input_method: true
   rime_ice: true
-  vicinae: false
+  vicinae: true
   bluetooth: false
   snapper: true
   keybindings: false

@@ -119,7 +119,7 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         assert data['profile'] == profile
         assert data['features']['rime_ice'] is True
         assert 'cliphist' not in data['features']
-        assert data['features']['vicinae'] == (profile == 'kde')
+        assert data['features']['vicinae'] is True
         assert data['features']['apfs_automount'] is False
         assert data['features']['t2_luks_keyboard_workaround'] is False
         assert 't2_usb_hotplug' not in data['features']
@@ -185,7 +185,6 @@ printf '%s\n' "${MODULES[@]}"
                         drop_in, module]).splitlines() == expected_modules
 
     # Deploy the module and load it before user bindings, without overwriting them.
-    bindings_source = (ROOT / 'files/omarchy/hypr/bindings.lua').read_bytes()
     bindings_loader = (b'-- BEGIN PROARCH BINDINGS\nrequire("hypr.proarch_bindings")\n'
                        b'-- END PROARCH BINDINGS\n')
     personal_bindings = b'-- Keep this local shortcut.\no.rebind("SUPER + F", "Local find", "local-find")\n'
@@ -215,7 +214,8 @@ printf '%s\n' "${MODULES[@]}"
                                target_home=str(bindings_home))
         run(bindings_config)
         assert local_bindings.read_bytes() == expected
-        assert managed_bindings.read_bytes() == bindings_source
+        deployed_bindings = managed_bindings.read_bytes()
+        command(['luac', '-p', str(managed_bindings)])
         assert hyprland_entry.read_bytes() == hyprland_defaults + workaround_loader + zoom_loader
         assert workaround.read_bytes() == workaround_source
         zoom = bindings_dir / 'floating_titlebar_zoom.lua'
@@ -240,21 +240,25 @@ printf '%s\n' "${MODULES[@]}"
             managed_bindings.write_text('-- Old managed contents.\n')
             run(bindings_config)
             assert local_bindings.read_bytes() == expected
-            assert managed_bindings.read_bytes() == bindings_source
+            assert managed_bindings.read_bytes() == deployed_bindings
             bindings_runner = work / 'bindings-runner.lua'
             bindings_runner.write_text('''
 local bindings = {}
-local function bind(key, description)
-  bindings[key] = description
+local function bind(key, description, action)
+  bindings[key] = { description = description, action = action }
 end
 o = { bind = bind, rebind = bind }
 hl = { unbind = function() end, dsp = { window = { float = function() end } } }
 package.path = arg[1] .. '/.config/?.lua;' .. package.path
 dofile(arg[1] .. '/.config/hypr/bindings.lua')
-assert(bindings['SUPER + R'] == 'Reload browser tab')
-assert(bindings['SUPER + F'] == 'Local find')
+assert(bindings['SUPER + R'].description == 'Reload browser tab')
+assert(bindings['SUPER + F'].description == 'Local find')
+assert(bindings['SUPER + e'].action == arg[2])
 ''')
-            command(['lua', str(bindings_runner), str(bindings_home)])
+            command(['lua', str(bindings_runner), str(bindings_home), 'vicinae toggle'])
+            run(bindings_config | {'feature_overrides': {'vicinae': False}})
+            assert local_bindings.read_bytes() == expected
+            command(['lua', str(bindings_runner), str(bindings_home), 'omarchy-menu toggle root'])
 
     # Personal wallpapers must appear in the native per-theme selector, including
     # after a theme change, without changing Omarchy's generated backgrounds.
@@ -371,7 +375,7 @@ end
         assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
         assert data['features']['rime_ice'] is True
         assert data['features']['snapper'] is True
-        assert data['features']['vicinae'] == (profile == 'kde')
+        assert data['features']['vicinae'] is True
 
     # Exercise the optional YAML config loader, then CLI precedence and nested merging.
     host = work / 'config.yml'
@@ -387,8 +391,7 @@ end
     assert data['omarchy']['shell']['bar']['background'] == 'glassy', 'Nested defaults were lost'
     assert set(data['omarchy']['shell']['bar']) == {'background', 'layout'}
     assert data['omarchy']['shell']['dock'] == {'autohide': True}
-    for overrides in [{'docker': 'false'}, {'unknown_feature': True},
-                      {'vicinae': True}, {'keybindings': True}]:
+    for overrides in [{'docker': 'false'}, {'unknown_feature': True}, {'keybindings': True}]:
         run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
     run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
     assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True

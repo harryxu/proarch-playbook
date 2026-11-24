@@ -1,7 +1,6 @@
 ---
 # Desktop defaults; host configuration can override these explicitly.
-features:
-  vicinae: true
+features: {}
 packages:
   - flameshot
   - ttf-jetbrains-mono-nerd

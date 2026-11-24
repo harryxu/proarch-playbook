@@ -78,9 +78,7 @@
       - not features.apfs_automount or desktop_profile == 'omarchy'
       - not features.t2_luks_keyboard_workaround or desktop_profile == 'omarchy'
       - not features.rime_ice or features.input_method
-      - not features.vicinae or desktop_profile == 'kde'
     fail_msg: >-
       Use YAML true/false for feature switches. Legacy xremap supports KDE only.
       APFS automount uses the Omarchy desktop session.
       The T2 LUKS keyboard workaround supports Omarchy only.
-      Omarchy manages its integrated launcher. Standalone Vicinae supports KDE only.

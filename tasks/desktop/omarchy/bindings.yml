@@ -1,7 +1,7 @@
 ---
 - name: Deploy the Proarch keybinding module
-  ansible.builtin.copy:
-    src: "{{ playbook_dir }}/files/omarchy/hypr/bindings.lua"
+  ansible.builtin.template:
+    src: "{{ playbook_dir }}/templates/omarchy/bindings.lua.j2"
     dest: "{{ target_home }}/.config/hypr/proarch_bindings.lua"
     mode: '0644'
     backup: true

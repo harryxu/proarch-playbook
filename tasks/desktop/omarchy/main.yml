@@ -2,6 +2,10 @@
 - name: Configure the shared SDDM theme
   ansible.builtin.import_tasks: ../../common/sddm_theme.yml
 
+- name: Configure the selected launcher integration
+  ansible.builtin.import_tasks: ../../vicinae.yml
+  when: features.vicinae
+
 - name: Check that Google Chrome is available before removing Chromium
   ansible.builtin.stat:
     path: /usr/bin/google-chrome-stable

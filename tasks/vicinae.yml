@@ -1,9 +1,4 @@
 ---
-- name: Require the explicit KDE launcher integration
-  ansible.builtin.assert:
-    that: desktop_profile == 'kde'
-    fail_msg: Omarchy uses its integrated launcher.
-
 - name: Install Vicinae from AUR
   kewlfft.aur.aur:
     use: yay
