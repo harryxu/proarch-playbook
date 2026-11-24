@@ -300,11 +300,15 @@ dofile(arg[1] .. '/.config/hypr/bindings.lua')
 assert(bindings['SUPER + R'].description == 'Reload browser tab')
 assert(bindings['SUPER + F'].description == 'Local find')
 assert(bindings['SUPER + e'].action == arg[2])
+local clipboard = bindings['SUPER + SHIFT + V'].action
+assert((type(clipboard) == 'table' and clipboard.panel or clipboard) == arg[3])
 ''')
-            command(['lua', str(bindings_runner), str(bindings_home), 'vicinae toggle'])
+            command(['lua', str(bindings_runner), str(bindings_home), 'vicinae toggle',
+                     'vicinae vicinae://launch/clipboard/history'])
             run(bindings_config | {'feature_overrides': {'vicinae': False}})
             assert local_bindings.read_bytes() == expected
-            command(['lua', str(bindings_runner), str(bindings_home), 'omarchy-menu toggle root'])
+            command(['lua', str(bindings_runner), str(bindings_home), 'omarchy-menu toggle root',
+                     'omarchy.clipboard'])
 
     # Personal wallpapers must appear in the native per-theme selector, including
     # after a theme change, without changing Omarchy's generated backgrounds.

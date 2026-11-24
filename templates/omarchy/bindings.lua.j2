@@ -89,7 +89,11 @@ o.bind("SUPER + CTRL + A", "Screenshot", "omasnap")
 
 -- Move the clipboard manager to Super+Shift+V.
 hl.unbind("SUPER + CTRL + V")
+{% if features.vicinae %}
+o.bind("SUPER + SHIFT + V", "Vicinae Clipboard History", "vicinae vicinae://launch/clipboard/history")
+{% else %}
 o.bind("SUPER + SHIFT + V", "Clipboard manager", { panel = "omarchy.clipboard" })
+{% endif %}
 
 -- DropSpace: Drag and drop window to workspace
 
