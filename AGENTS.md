@@ -36,6 +36,11 @@ Run syntax checks for both profiles and `python3 tests/verify.py`.
 The integration suite operates only in disposable directories under `/tmp`.
 A full playbook run changes the host; use `test.yml` for prerequisite checks.
 
+## Project rules
+
+Keep file changes within the project directory by default. Before creating, modifying, moving, or deleting any file outside the project directory, tell the user which paths and operations are involved and obtain their explicit approval. This rule also applies to indirect changes through symlinks, scripts, or commands.
+
+
 ## Agent skills
 
 ### Omarchy workaround retirement
