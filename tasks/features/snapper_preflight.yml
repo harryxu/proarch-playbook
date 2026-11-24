@@ -1,7 +1,8 @@
 ---
 - name: Gather mount facts for Snapper
   ansible.builtin.setup:
-    gather_subset: [mounts]
+    # Preserve the connection user's environment gathered during preflight.
+    gather_subset: ['!all', '!min', mounts]
 
 - name: Require a Btrfs root filesystem for Snapper
   ansible.builtin.assert:

@@ -29,6 +29,52 @@ def command(args, **kwargs):
 
 with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
     work = Path(temporary)
+    hyprland_fixture = work / 'hyprland'
+    hyprland_fixture.mkdir()
+    hyprctl = hyprland_fixture / 'hyprctl'
+    hyprctl.write_text('''#!/bin/sh
+[ "$HYPRLAND_INSTANCE_SIGNATURE" = fixture-instance ] || exit 1
+printf '%s\\n' "$1" >> "$HYPRLAND_TEST_LOG"
+''')
+    hyprctl.chmod(0o755)
+    hyprland_log = hyprland_fixture / 'commands'
+    hyprland_play = hyprland_fixture / 'reload.yml'
+    hyprland_play.write_text(f"""---
+- hosts: all
+  gather_facts: false
+  vars:
+    has_hyprland_session: true
+    target_user: {os.getuid()}
+    target_uid: {os.getuid()}
+    snapper_bootloader: fixture-stop
+  environment:
+    PATH: "{hyprland_fixture}:{{{{ lookup('env', 'PATH') }}}}"
+    HYPRLAND_TEST_LOG: "{hyprland_log}"
+  tasks:
+    - name: Gather facts with a Hyprland session
+      ansible.builtin.setup:
+        gather_subset: [min]
+      environment:
+        HYPRLAND_INSTANCE_SIGNATURE: fixture-instance
+    # Stop after the real mount probe without requiring a particular root filesystem.
+    - block:
+        - ansible.builtin.import_tasks: "{ROOT / 'tasks/features/snapper_preflight.yml'}"
+      rescue:
+        - ansible.builtin.assert:
+            that: ansible_failed_task.name in ['Require a Btrfs root filesystem for Snapper',
+                                               'Validate the Snapper bootloader setting']
+    - name: Notify the reload handler
+      ansible.builtin.debug:
+        msg: Simulate a personal configuration change
+      changed_when: true
+      notify: Reload Hyprland
+  handlers:
+    - ansible.builtin.import_tasks: "{ROOT / 'handlers/main.yml'}"
+""")
+    command(['env', '-u', 'HYPRLAND_INSTANCE_SIGNATURE', 'ansible-playbook',
+             str(hyprland_play), '-i', 'localhost,', '-c', 'local', '-e', 'ansible_become=false'])
+    assert hyprland_log.read_text().splitlines() == ['reload', 'configerrors']
+
     bootloader_probe = runpy.run_path(str(ROOT / 'files/snapper/detect-bootloader.py'))
     efi_entries = r"""
 BootOrder: 0001,0002,0003
