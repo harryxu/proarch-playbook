@@ -48,7 +48,7 @@
         file: "tasks/desktop/{{ desktop_profile }}/main.yml"
         apply:
           tags: [desktop, "{{ desktop_profile }}"]
-      tags: [desktop, kde, omarchy]
+      tags: [desktop, kde, omarchy, sddm_login]
 
     - name: Configure optional features
       ansible.builtin.import_tasks: tasks/features/main.yml

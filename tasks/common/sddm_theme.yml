@@ -104,3 +104,4 @@
 
 - name: Configure login after disk unlock
   ansible.builtin.import_tasks: sddm_autologin.yml
+  tags: [sddm_login]

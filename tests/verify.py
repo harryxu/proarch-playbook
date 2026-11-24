@@ -69,6 +69,8 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
       when: verify_dotconfig | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/user_service.yml') + """
       when: verify_user_service | default(false)
+    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/sddm_autologin.yml') + """
+      when: verify_sddm_login | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/extra_keybindings.yml') + """
       when: verify_xremap_entry | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/desktop/omarchy/keyboard.yml') + """
@@ -121,6 +123,35 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         assert data['features']['apfs_automount'] is False
         assert data['features']['t2_luks_keyboard_workaround'] is False
         assert 't2_usb_hotplug' not in data['features']
+
+    sddm_config = work / 'sddm.conf'
+    sddm_drop_in = work / 'sddm.conf.d/autologin.conf'
+    sddm_drop_in.parent.mkdir()
+    native_login = '[Autologin]\nUser=omarchy-owner\nSession=omarchy.desktop\n'
+    old_config = ('[Theme]\nCurrent=silent\n[Autologin]\nUser={user}\n'
+                  'Session=plasma.desktop\nRelogin=false\n')
+    login_fixture = dict(verify_sddm_login=True, sddm_config_file=str(sddm_config),
+                         sddm_root_unlock={'stdout': 'unknown'})
+    for profile, has_drop_in, expected_session in [
+        ('omarchy', True, 'omarchy.desktop'),
+        ('omarchy', False, None),
+        ('kde', True, None),
+    ]:
+        sddm_config.write_text(old_config.format(user='' if expected_session else 'stale-user'))
+        if has_drop_in:
+            sddm_drop_in.write_text(native_login)
+        else:
+            sddm_drop_in.unlink()
+        run(login_fixture | dict(desktop_profile=profile))
+        # SDDM reads /etc/sddm.conf after its drop-ins.
+        effective_login = configparser.ConfigParser()
+        effective_login.read([sddm_drop_in, sddm_config])
+        assert effective_login['Theme']['Current'] == 'silent'
+        assert effective_login['Autologin']['User'] == ('omarchy-owner' if expected_session else '')
+        if expected_session:
+            assert effective_login['Autologin']['Session'] == expected_session
+        if has_drop_in:
+            assert sddm_drop_in.read_text() == native_login
 
     # The legacy installer filter drops every listed module for every kernel.
     # The late drop-in must restore just the optional T2 driver.
