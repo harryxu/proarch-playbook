@@ -157,6 +157,19 @@ o.rebind("SUPER + T", "New tab", function()
   end, { timeout = 50, type = "oneshot" })
 end)
 
+-- Use the physical bracket keys to switch tabs in the focused application.
+local function switch_tab(key)
+  return function()
+    hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = key, state = "down" }))
+    hl.timer(function()
+      hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = key, state = "up" }))
+    end, { timeout = 50, type = "oneshot" })
+  end
+end
+
+o.bind("SUPER + SHIFT + code:34", "Previous tab", switch_tab("Prior"))
+o.bind("SUPER + SHIFT + code:35", "Next tab", switch_tab("Next"))
+
 -- Forward Super+Z as Ctrl+Z in the focused application.
 o.bind("SUPER + Z", "Undo", function()
   hl.dispatch(hl.dsp.send_key_state({ mods = "CTRL", key = "Z", state = "down" }))
