@@ -1,11 +1,4 @@
 ---
-- name: Deploy the managed top bar
-  ansible.builtin.include_tasks: bar.yml
-  vars:
-    omarchy_stock_bar_dir: "{{ (ansible_facts.env.OMARCHY_PATH | default('/usr/share/omarchy')) + '/shell/plugins/bar' }}"
-    omarchy_top_bar_dir: "{{ target_home }}/.config/omarchy/plugins/proarch.bar"
-  when: omarchy_settings.manage_top_bar
-
 - name: Check for existing personal Shell preferences
   ansible.builtin.stat:
     path: "{{ target_home }}/.config/omarchy/shell.json"

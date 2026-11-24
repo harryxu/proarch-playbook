@@ -699,19 +699,6 @@ exit 0
                       'dock': {'autohide': False, 'pinned': ['system-app'], 'size': 48}}
     (fake_native / 'config/omarchy').mkdir(parents=True)
     (fake_native / 'config/omarchy/shell.json').write_text(json.dumps(shell_defaults))
-    stock_bar = fake_native / 'shell/plugins/bar'
-    stock_bar.mkdir(parents=True)
-    # Reconstruct the old side of the patch as a stand-in for the package's QML.
-    stock_lines = []
-    for line in (ROOT / 'files/omarchy/bar/indicators-hover.patch').read_text().splitlines()[2:]:
-        if line.startswith('@@'):
-            start = int(re.match(r'@@ -(\d+)', line)[1])
-            stock_lines.extend([''] * (start - len(stock_lines) - 1))
-        elif line.startswith((' ', '-')):
-            stock_lines.append(line[1:])
-    stock_qml = '\n'.join(stock_lines) + '\n'
-    (stock_bar / 'Bar.qml').write_text(stock_qml)
-    (stock_bar / 'BarModel.js').write_text('// Installed model\n')
     shell_play = work / 'shell-preferences.yml'
     shell_play.write_text(json.dumps([{
         'name': 'Verify desktop configuration preserves host fonts, monitors and theme',
@@ -728,8 +715,7 @@ exit 0
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/hyprland.yml')},
                   {'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/shell.yml')}],
         'handlers': [{'name': name, 'ansible.builtin.debug': {'msg': 'Fixture only'}}
-                     for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance',
-                                  'Rescan Omarchy plugins']],
+                     for name in ['Reload Hyprland', 'Synchronize Omarchy bar appearance']],
     }]))
     shell_cmd = ['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
@@ -755,7 +741,7 @@ exit 0
     shell_json = app_home / '.config/omarchy/shell.json'
     shell_data = json.loads(shell_json.read_text())
     assert shell_data['bar'] == {
-        'background': 'glassy', 'position': 'bottom', 'id': 'proarch.bar',
+        'background': 'glassy', 'position': 'bottom',
         'layout': {'left': ['omarchy.menu', 'omarchy.workspaces', indicators, 'user.widget'],
                    'centerBegin': [], 'center': [], 'centerEnd': [],
                    'right': [managed_tray, weather, clock], 'tray': ['user.tray']},
@@ -766,19 +752,14 @@ exit 0
     ]
     assert shell_data['disabledPlugins'] == ['omarchy.dock']
     assert shell_data['cloneSourceRestores'] == ['harryxu.dogedock']
-    plugin_bar = app_home / '.config/omarchy/plugins/proarch.bar'
-    assert json.loads((plugin_bar / 'manifest.json').read_text())['id'] == 'proarch.bar'
-    assert 'layoutWidgets.sections.left.some' in (plugin_bar / 'Bar.qml').read_text()
-    assert (plugin_bar / 'BarModel.js').read_bytes() == (stock_bar / 'BarModel.js').read_bytes()
-    assert (stock_bar / 'Bar.qml').read_text() == stock_qml
-    # Migrate the previous layout, with the indicators already on the right.
-    shell_data['bar']['id'] = 'harry.bar'
+    # Move indicators from the previous layout while preserving the selected bar.
+    shell_data['bar']['id'] = 'user.bar'
     shell_data['bar']['layout']['left'].remove(indicators)
     shell_data['bar']['layout']['right'].insert(1, indicators)
     shell_json.write_text(json.dumps(shell_data))
     command(shell_cmd)
     shell_data = json.loads(shell_json.read_text())
-    assert shell_data['bar']['id'] == 'proarch.bar'
+    assert shell_data['bar']['id'] == 'user.bar'
     assert shell_data['bar']['layout']['left'][2] == indicators
     assert shell_data['bar']['layout']['right'] == [managed_tray, weather, clock]
     shell_data['bar']['layout']['right'].remove(clock)
@@ -801,7 +782,7 @@ exit 0
             {'id': 'fixture.new', 'repo': 'unused'},
         ],
     }})]
-    shell_data['bar'] = {'background': 'opaque', 'position': 'left',
+    shell_data['bar'] = {'background': 'opaque', 'position': 'left', 'id': 'user.bar',
                          'layout': {'center': [{'id': 'user.clock', 'format': 'HH:mm'}],
                                     'right': ['omarchy.agents']},
                          'user-option': {'enabled': True}}

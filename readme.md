@@ -255,13 +255,11 @@ The maintained configuration includes:
   GPU memory capacity is at most 2 GiB. The playbook reads AMDGPU sysfs and
   `nvidia-smi` when available. If neither reports a usable capacity, or a GPU
   reports more than 2 GiB, it leaves the current setting alone.
-- The top bar puts a lightning icon for status indicators immediately after the
-  workspaces, moves the middle widgets to the right, and puts the clock last.
-  The profile builds its user-owned bar from the installed Omarchy bar and
-  preserves widget settings, tray entries, and the bar position. The hover
-  patch was verified on Omarchy 4.5.0-3 and requires matching upstream QML. Set
-  `omarchy_overrides.manage_top_bar: false` to keep the current bar selection
-  and layout, or override individual sections under `omarchy_overrides.shell.bar.layout`.
+- The top bar places status indicators immediately after the workspaces,
+  moves the middle widgets to the right, and puts the clock last. The profile
+  preserves widget settings, tray entries, the bar position, and the selected
+  bar. Set `omarchy_overrides.manage_top_bar: false` to keep the current widget
+  placement, or override individual sections under `omarchy_overrides.shell.bar.layout`.
 - The system theme is selected manually in Omarchy and is never changed by
   this playbook.
 - SpaceX Starship launch wallpapers from the stock Tokyo Night and Starship

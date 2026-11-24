@@ -31,7 +31,7 @@ def place_omarchy_bar_widgets(config):
     layout["right"] = right + clocks
     for section in center_sections:
         layout[section] = []
-    return {**config, "bar": {**bar, "id": "proarch.bar", "layout": layout}}
+    return {**config, "bar": {**bar, "layout": layout}}
 
 
 def apply_omarchy_bar_visibility(config, hide_superwhisper, disable_agents):
