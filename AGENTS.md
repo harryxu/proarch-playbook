@@ -22,7 +22,7 @@ development environment with an explicit KDE or Omarchy desktop profile.
 - Require `desktop_profile: kde` or `omarchy`; validate before system changes.
 - Use `target_user` and the resolved `target_home`, keeping connection identity separate.
 - Install Arch packages through pacman and AUR packages as `aur_builder`.
-- Deploy shared dotconfig through the tracked-file allowlist with backups.
+- Bootstrap shared dotconfig directly in `target_home/.config`; skip existing Git repositories.
 - Keep Omarchy packaged defaults and generated state under Omarchy's ownership.
   Read `docs/adr/0001-configuration-ownership.md` before changing file ownership.
 - Default profile selection leaves existing software and unrelated services intact.

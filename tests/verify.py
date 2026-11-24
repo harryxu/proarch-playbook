@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise configuration gates and real dotconfig copies in temporary homes."""
+"""Exercise configuration gates and real dotconfig checkout in temporary homes."""
 import configparser
 import json
 import os
@@ -378,12 +378,11 @@ end
                  success=False, check=True)
     assert 'xremap requires the KDE desktop profile.' in output
 
-    # A real local Git source and a disposable existing home: backups, allowlist, idempotence.
+    # A real Git origin and a prepopulated config directory.
     source = work / 'source'
     for name, text in {'nvim/init.lua': 'return {}\n', 'git/config': '[core]\n  editor = nvim\n',
                        'nvim/space name.lua': 'return "space"\n',
                        'nvim/line\nbreak.lua': 'return "newline"\n',
-                       'omarchy/shell.json': 'must not deploy\n',
                        'xremap/config.yml': 'modmap: []\n'}.items():
         path = source / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -397,24 +396,28 @@ end
     (home / 'nvim/init.lua').write_text('personal previous content\n')
     (home / 'omarchy').mkdir()
     (home / 'omarchy/shell.json').write_text('desktop sentinel\n')
-    (home / '.git').mkdir()
-    (home / '.git/sentinel').write_text('existing repository\n')
     deploy = dict(desktop_profile='omarchy', verify_dotconfig=True,
-                  dotconfig_repo=str(source), dotconfig_source_dir=str(work / 'checkout'))
+                  dotconfig_repo=str(source))
+    run(deploy, check=True)
+    assert not (home / '.git').exists()
+    run(deploy | {'dotconfig_repo': str(work / 'missing-origin')}, success=False)
+    assert not (home / '.git').exists()
+    assert (home / 'nvim/init.lua').read_text() == 'personal previous content\n'
     run(deploy)
+    git = ['git', '-C', str(home)]
+    assert command(git + ['rev-parse', '--show-toplevel']).strip() == str(home)
+    assert command(git + ['remote', 'get-url', 'origin']).strip() == str(source)
+    assert command(git + ['rev-parse', '--abbrev-ref', '@{upstream}']).strip() == 'origin/main'
+    assert not (home.parent / '.local/share/proarch/dotconfig').exists()
     assert (home / 'nvim/init.lua').read_text() == 'return {}\n'
     assert (home / 'nvim/space name.lua').read_text() == 'return "space"\n'
     assert (home / 'nvim/line\nbreak.lua').read_text() == 'return "newline"\n'
-    backups = list((home / 'nvim').glob('init.lua.*~'))
-    assert len(backups) == 1 and backups[0].read_text() == 'personal previous content\n'
     assert (home / 'omarchy/shell.json').read_text() == 'desktop sentinel\n'
-    assert (home / '.git/sentinel').read_text() == 'existing repository\n'
-    assert not (home / 'xremap/config.yml').exists(), 'Omarchy deployed KDE configuration'
-    second = run(deploy)
-    assert re.search(r'changed=0\b', second), second
-    assert len(list((home / 'nvim').glob('init.lua.*~'))) == 1
-    run(deploy | {'desktop_profile': 'kde'})
     assert (home / 'xremap/config.yml').read_text() == 'modmap: []\n'
+    (home / 'nvim/init.lua').write_text('local edit\n')
+    second = run(deploy | {'dotconfig_repo': str(work / 'missing-origin')})
+    assert re.search(r'changed=0\b', second), second
+    assert (home / 'nvim/init.lua').read_text() == 'local edit\n'
 
     # Exercise both the real service condition and direct startup with a harmless backend.
     launcher = work / 'home/.local/bin/xremap-launcher'
@@ -929,7 +932,7 @@ printf x >> "$destination/installs"
     stable_themes = sync_themes()
     assert re.search(r'changed=0\b', stable_themes), stable_themes
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
-    print('      real allowlist copies, per-file backups, preserved desktop/repository,')
+    print('      in-place Git checkout, preserved untracked files and existing repositories,')
     print('      managed keybinding imports, local precedence, backups and stable reruns,')
     print('      floating fullscreen workaround deployment and adoption of the manual loader,')
     print('      native wallpaper selector links, preserved images and stable theme-change hooks,')

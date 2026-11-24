@@ -29,20 +29,7 @@ omarchy_settings: >-
      | combine(omarchy_overrides, recursive=true, list_merge='replace') }}
 
 dotconfig_repo: https://github.com/harryxu/dotconfig.git
-dotconfig_version: HEAD
-dotconfig_source_dir: "{{ target_home }}/.local/share/proarch/dotconfig"
-# Only tracked files below these paths are deployed. Existing files are backed up.
-dotconfig_paths:
-  - fish
-  - git
-  - ghostty
-  - herdr
-  - kitty
-  - nvim
-  - scripts
-  - starship.toml
-  - tmux
-  - zed
+dotconfig_version: main
 
 # Use SDDM on KDE at the next boot.
 kde_manage_display_manager: true

@@ -1,53 +1,52 @@
 ---
-- name: Deploy only explicitly selected tracked dotconfig files
+- name: Set up dotconfig in the live configuration directory
   become: true
   become_user: "{{ target_user }}"
   environment:
     HOME: "{{ target_home }}"
   block:
-    - name: Validate dotconfig paths
-      ansible.builtin.assert:
-        that:
-          - dotconfig_source_dir != target_home ~ '/.config'
-          - dotconfig_paths is sequence and dotconfig_paths is not string
-          - item is match('^[A-Za-z0-9_.-]+$')
-          - item not in ['.', '..', '.git', 'hypr', 'omarchy']
-        fail_msg: Use top-level shared configuration paths and a separate source checkout.
-      loop: "{{ dotconfig_paths + profile_defaults.dotconfig_paths }}"
-
-    - name: Create the source checkout parent
-      ansible.builtin.file:
-        path: "{{ dotconfig_source_dir | dirname }}"
-        state: directory
-        mode: '0755'
-
-    - name: Check out dotconfig outside the live configuration directory
-      ansible.builtin.git:
-        repo: "{{ dotconfig_repo }}"
-        dest: "{{ dotconfig_source_dir }}"
-        version: "{{ dotconfig_version }}"
-        update: true
-        force: false
-
-    - name: Check whether the source checkout is available
+    - name: Check for an existing configuration repository
       ansible.builtin.stat:
-        path: "{{ dotconfig_source_dir }}/.git"
-      register: dotconfig_source
+        path: "{{ target_home }}/.config/.git"
+      register: dotconfig_git
 
-    - name: List tracked allowlisted files
-      ansible.builtin.command:
-        argv: "{{ ['git', 'ls-files', '-z', '--'] + dotconfig_paths + profile_defaults.dotconfig_paths }}"
-        chdir: "{{ dotconfig_source_dir }}"
-      register: dotconfig_tracked
-      changed_when: false
-      check_mode: false
-      when: dotconfig_source.stat.exists
+    - name: Initialize and check out dotconfig on first deployment
+      ansible.builtin.shell: |
+        set -euo pipefail
+        mkdir -p -- .config
+        cd -- .config
+        exec 9<.
+        flock --exclusive 9
+        if [[ -e .git || -L .git ]]; then
+          exit 0
+        fi
 
-    - name: Deploy the available tracked files
-      ansible.builtin.include_tasks: dotconfig_files.yml
-      when: dotconfig_source.stat.exists
-
-    - name: Explain first-install check mode limitations
-      ansible.builtin.debug:
-        msg: The source checkout is not present yet; file diffs can be previewed after it is cloned.
-      when: not dotconfig_source.stat.exists
+        # Publish the Git directory only after checkout succeeds, so a failed run can retry.
+        staging=$(mktemp -d .proarch-dotconfig.XXXXXXXX)
+        trap 'rm -rf -- "$staging"' EXIT
+        git init "$staging"
+        git_config=(git --git-dir="$staging/.git" --work-tree=.)
+        "${git_config[@]}" remote add -- origin "$DOTCONFIG_REPO"
+        "${git_config[@]}" fetch origin
+        remote_branch="refs/remotes/origin/$DOTCONFIG_VERSION"
+        if [[ $DOTCONFIG_VERSION == HEAD ]]; then
+          remote_branch=$("${git_config[@]}" symbolic-ref --quiet "$remote_branch" || true)
+        fi
+        if "${git_config[@]}" show-ref --verify --quiet "$remote_branch"; then
+          "${git_config[@]}" checkout --force --track "$remote_branch"
+        else
+          "${git_config[@]}" fetch -- origin "$DOTCONFIG_VERSION"
+          "${git_config[@]}" checkout --force --detach FETCH_HEAD
+        fi
+        mv --no-clobber --no-target-directory -- "$staging/.git" .git
+        test ! -e "$staging/.git"
+        echo 'Initialized dotconfig'
+      args:
+        chdir: "{{ target_home }}"
+        executable: /bin/bash
+      environment:
+        DOTCONFIG_REPO: "{{ dotconfig_repo }}"
+        DOTCONFIG_VERSION: "{{ dotconfig_version }}"
+      register: dotconfig_checkout
+      changed_when: "'Initialized dotconfig' in dotconfig_checkout.stdout_lines"
+      when: not dotconfig_git.stat.exists

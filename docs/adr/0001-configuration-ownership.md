@@ -1,9 +1,11 @@
 # Give each configuration file one owner
 
-Shared dotconfig is deployed from an explicit allowlist, with backups before
-replacing existing files. Desktop profiles own their personal overrides, while
-Omarchy owns its packaged defaults and generated theme files. This replaces
-checking out a repository forcibly over the whole configuration directory:
-whole-directory deployment is simpler, but can overwrite desktop integration
-and unrelated personal changes. Existing dotconfig repositories remain in place;
-profile selection configures the chosen environment without removing another.
+Shared dotconfig is initialized directly in the target user's `~/.config` so
+the deployed files can be managed with Git. The first deployment force-checks
+out the configured ref and can replace files at paths tracked by that ref.
+Subsequent runs skip existing Git repositories, leaving updates to the user.
+This replaces the separate checkout and allowlisted copies.
+
+Desktop profiles apply their personal overrides after dotconfig initialization.
+Omarchy owns its packaged defaults and generated theme files. Keep these paths
+out of shared dotconfig to avoid collisions during the first checkout.

@@ -172,8 +172,8 @@ partition usage limit can also reduce the number of entries.
 
 xremap is installed only with `desktop_profile: kde` and
 `feature_overrides.keybindings: true`. Its task entry point also requires KDE,
-including when its task file is imported directly. Its configuration is deployed
-only by the KDE profile. The launcher and systemd `ExecCondition` check the
+including when its task file is imported directly. Shared dotconfig may provide
+xremap configuration files on either profile. The launcher and systemd `ExecCondition` check the
 current session's `XDG_CURRENT_DESKTOP` for a KDE/Plasma token, so an enabled
 service skips startup in Hyprland, GNOME, other desktops, and headless sessions.
 The service stops with the graphical session; it does not continually restart
@@ -184,14 +184,13 @@ overrides in inventory host variables instead of a local `config.yml`.
 A local config takes precedence over inventory values; command-line `-e`
 values take precedence over both.
 
-## Configuration ownership and backups
+## Configuration ownership
 
-Shared dotconfig still comes from `harryxu/dotconfig`, with its configuration
-contents unchanged. It is checked out separately under
-`~/.local/share/proarch/dotconfig`. Only tracked files under `dotconfig_paths`
-(and the selected profile's additional paths) are copied into `~/.config`.
-Existing files receive Ansible per-file backups before replacement. Files
-outside this allowlist and any existing `~/.config/.git` are preserved.
+Shared dotconfig initializes `~/.config` as a Git working tree from
+`harryxu/dotconfig` and tracks `origin/main` by default. The first checkout
+forces Git to replace conflicting files at tracked paths without backups.
+When `~/.config/.git` already exists, the playbook skips Git setup. Use Git
+in `~/.config` to manage later updates.
 
 Each path has one owner: shared dotconfig manages application preferences;
 the desktop profile manages its overrides; Omarchy owns packaged defaults
@@ -436,8 +435,8 @@ python3 tests/verify.py
 
 The integration checks use disposable local Git repositories and homes under
 `/tmp`. They cover required selection, both profiles, override precedence,
-invalid settings, actual allowlisted copies and backups, untouched desktop
-files and existing Git metadata, second-run idempotence, latest KDE theme
+invalid settings, in-place Git checkout and retries, preservation of unrelated
+files and existing Git repositories, second-run idempotence, latest KDE theme
 updates without duplicate installation, and Lua parsing.
 They do not install packages, start services, or alter live configuration.
 
@@ -445,7 +444,7 @@ Install `ansible-lint` separately to run lint checks. `.ansible-lint.yml` adds
 file classifications for the examples. Its project-wide `skip_list` contains
 only `latest[git]`, allowing Git tasks to follow upstream without inline
 exceptions. Other lint rules remain enabled.
-Shared dotconfig and KDE theme Git checkouts synchronize upstream by default.
+KDE theme Git checkouts synchronize upstream by default.
 Omarchy plugins are cloned only when missing and are left untouched afterward.
 Explicit version overrides remain supported for their initial installation.
 KDE theme repositories synchronize upstream `HEAD` on each run. Graphite and
