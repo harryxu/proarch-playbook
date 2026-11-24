@@ -124,7 +124,7 @@ omarchy_overrides:
 | Docker, SSH, shared dotconfig | Enabled | Enabled |
 | Fcitx5 / Rime components | Enabled | Enabled |
 | Rime Ice personal preference | Enabled | Enabled |
-| Standalone cliphist and Vicinae services | Enabled, preserving the old playbook | Disabled; Omarchy supplies these integrations |
+| Standalone Vicinae service | Enabled | Disabled; Omarchy supplies its launcher |
 | Bluetooth configuration | Opt-in | Opt-in; existing Omarchy services remain intact |
 | Snapper snapshots on Btrfs | Enabled with GRUB or Limine | Enabled with GRUB or Limine |
 | KDE xremap integration | Opt-in | Unsupported; use Hyprland integration |
@@ -134,8 +134,7 @@ omarchy_overrides:
 
 `false` skips a feature; it does not remove existing packages or undo earlier
 configuration. Before reusing a home previously configured by the old playbook,
-disable its standalone cliphist/Vicinae services if moving to Omarchy. These
-are session migration actions rather than automatic profile cleanup. The old
+disable its standalone Vicinae service if moving to Omarchy. The old
 playbook-owned Fcitx desktop autostart is recognized and disabled when native
 input integration is configured.
 

@@ -1,13 +1,11 @@
 ---
 # Desktop defaults; host configuration can override these explicitly.
 features:
-  cliphist: true
   vicinae: true
 packages:
   - flameshot
   - ttf-jetbrains-mono-nerd
   - rofi
-  - cliphist
   - wl-clipboard
 aur_packages:
   - herdr-bin

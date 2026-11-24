@@ -69,16 +69,6 @@
     DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
   when: has_graphical_session
   changed_when: true
-- name: Reload user systemd units
-  ansible.builtin.systemd_service:
-    scope: user
-    daemon_reload: true
-  become: true
-  become_user: "{{ target_user }}"
-  environment:
-    XDG_RUNTIME_DIR: /run/user/{{ target_uid }}
-    DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/{{ target_uid }}/bus
-  when: user_bus.stat.exists
 - name: Reload Hyprland
   ansible.builtin.include_tasks: hyprland.yml
   when: has_hyprland_session

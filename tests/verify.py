@@ -116,7 +116,7 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         data = json.loads((work / 'result.json').read_text())
         assert data['profile'] == profile
         assert data['features']['rime_ice'] is True
-        assert data['features']['cliphist'] == (profile == 'kde')
+        assert 'cliphist' not in data['features']
         assert data['features']['vicinae'] == (profile == 'kde')
         assert data['features']['apfs_automount'] is False
         assert data['features']['t2_luks_keyboard_workaround'] is False
@@ -340,7 +340,6 @@ end
         assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
         assert data['features']['rime_ice'] is True
         assert data['features']['snapper'] is True
-        assert data['features']['cliphist'] == (profile == 'kde')
         assert data['features']['vicinae'] == (profile == 'kde')
 
     # Exercise the optional YAML config loader, then CLI precedence and nested merging.
@@ -358,14 +357,15 @@ end
     assert set(data['omarchy']['shell']['bar']) == {'background', 'layout'}
     assert data['omarchy']['shell']['dock'] == {'autohide': True}
     for overrides in [{'docker': 'false'}, {'unknown_feature': True},
-                      {'cliphist': True}, {'keybindings': True}]:
+                      {'vicinae': True}, {'keybindings': True}]:
         run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
     run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
     assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True
     run(dict(desktop_profile='omarchy',
-             feature_overrides={'apfs_automount': True, 't2_usb_hotplug': False}))
+             feature_overrides={'apfs_automount': True, 't2_usb_hotplug': False, 'cliphist': True}))
     storage_features = json.loads((work / 'result.json').read_text())['features']
     assert storage_features['apfs_automount'] and 't2_usb_hotplug' not in storage_features
+    assert 'cliphist' not in storage_features
     output = run(dict(desktop_profile='kde', feature_overrides={'apfs_automount': True}),
                  success=False)
     assert 'APFS automount uses the Omarchy desktop session' in output

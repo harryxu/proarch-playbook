@@ -13,10 +13,6 @@
   ansible.builtin.import_tasks: input_method.yml
   when: features.input_method
 
-- name: Configure the selected clipboard integration
-  ansible.builtin.import_tasks: ../../cliphist.yml
-  when: features.cliphist
-
 - name: Configure the selected launcher integration
   ansible.builtin.import_tasks: ../../vicinae.yml
   when: features.vicinae

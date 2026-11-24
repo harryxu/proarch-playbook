@@ -16,24 +16,28 @@
     file: "{{ playbook_dir }}/profiles/{{ desktop_profile }}.yml"
     name: profile_defaults
 
-- name: Validate override types
-  ansible.builtin.assert:
-    that:
-      - feature_overrides is mapping
-      - omarchy_overrides is mapping
-      - extra_packages is sequence and extra_packages is not string
-      - extra_aur_packages is sequence and extra_aur_packages is not string
-      # Accept old host configs while hardware detection replaces this switch.
-      - feature_overrides.keys() | difference((feature_defaults.keys() | list) + ['t2_usb_hotplug']) | length == 0
-    fail_msg: Overrides must use the documented keys and YAML types.
+- name: Validate host overrides and resolve feature switches
+  vars:
+    # Accept older host configuration files after removing feature switches.
+    retired_features: [t2_usb_hotplug, cliphist]
+  block:
+    - name: Check host override keys and types
+      ansible.builtin.assert:
+        that:
+          - feature_overrides is mapping
+          - omarchy_overrides is mapping
+          - extra_packages is sequence and extra_packages is not string
+          - extra_aur_packages is sequence and extra_aur_packages is not string
+          - feature_overrides.keys() | difference((feature_defaults.keys() | list) + retired_features) | length == 0
+        fail_msg: Overrides must use the documented keys and YAML types.
 
-- name: Resolve shared and desktop feature defaults with host overrides
-  ansible.builtin.set_fact:
-    features: >-
-      {{ feature_defaults | combine(profile_defaults.features, recursive=true)
-         | combine(feature_overrides | dict2items
-                   | rejectattr('key', 'equalto', 't2_usb_hotplug') | items2dict,
-                   recursive=true) }}
+    - name: Resolve shared and desktop feature defaults with host overrides
+      ansible.builtin.set_fact:
+        features: >-
+          {{ feature_defaults | combine(profile_defaults.features, recursive=true)
+             | combine(feature_overrides | dict2items
+                       | rejectattr('key', 'in', retired_features) | items2dict,
+                       recursive=true) }}
 
 - name: Validate the host keyboard type
   ansible.builtin.assert:
@@ -74,10 +78,9 @@
       - not features.apfs_automount or desktop_profile == 'omarchy'
       - not features.t2_luks_keyboard_workaround or desktop_profile == 'omarchy'
       - not features.rime_ice or features.input_method
-      - desktop_profile != 'omarchy' or (not features.cliphist and not features.vicinae)
+      - not features.vicinae or desktop_profile == 'kde'
     fail_msg: >-
       Use YAML true/false for feature switches. Legacy xremap supports KDE only.
       APFS automount uses the Omarchy desktop session.
       The T2 LUKS keyboard workaround supports Omarchy only.
-      Omarchy owns its clipboard and launcher services; do not start the legacy
-      cliphist or Vicinae integrations there.
+      Omarchy manages its integrated launcher. Standalone Vicinae supports KDE only.

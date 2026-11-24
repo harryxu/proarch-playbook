@@ -14,7 +14,6 @@ feature_overrides:
   apfs_automount: false # Omarchy only; automatically mount USB APFS volumes read-only.
   t2_luks_keyboard_workaround: false # Affected Omarchy T2 Macs only. See docs/omarchy-t2-luks-keyboard.md.
   # Uncomment to override the selected profile's defaults:
-  # cliphist: false   # KDE: true; Omarchy: must remain false.
   # vicinae: false    # KDE: true; Omarchy: must remain false.
 
 # Additional software alongside the shared and desktop package lists.
