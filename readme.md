@@ -187,11 +187,18 @@ values take precedence over both.
 
 ## Configuration ownership
 
-Shared dotconfig initializes `~/.config` as a Git working tree from
-`harryxu/dotconfig` and tracks `origin/main` by default. The first checkout
-forces Git to replace conflicting files at tracked paths without backups.
-When `~/.config/.git` already exists, the playbook skips Git setup. Use Git
-in `~/.config` to manage later updates.
+When `~/.config/.git` already exists, the playbook skips the entire dotconfig
+installer. Use Git in `~/.config` to manage later updates.
+
+On first deployment, the playbook runs the upstream installer as the target
+user. It checks out `origin/main` from `harryxu/dotconfig` into `~/.config`
+and can overwrite existing files at tracked paths without backups. It also
+applies shared Zed settings, sets up a prek post-commit hook, installs Starship
+if needed, and sets fish as the login shell. See the
+[upstream installation instructions](https://github.com/harryxu/dotconfig#installation).
+
+If the installer fails after creating `.git`, the playbook saves that Git
+metadata in `~/.proarch-dotconfig-failed.*/.git` so the next run can retry.
 
 Each path has one owner: shared dotconfig manages application preferences;
 the desktop profile manages its overrides; Omarchy owns packaged defaults

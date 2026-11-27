@@ -1,52 +1,42 @@
 ---
-- name: Set up dotconfig in the live configuration directory
+- name: Run the dotconfig installer on first deployment
   become: true
   become_user: "{{ target_user }}"
   environment:
     HOME: "{{ target_home }}"
-  block:
-    - name: Check for an existing configuration repository
-      ansible.builtin.stat:
-        path: "{{ target_home }}/.config/.git"
-      register: dotconfig_git
+  ansible.builtin.shell: |
+    set -euo pipefail
+    exec 9<.
+    flock --exclusive 9
+    if [[ -e .config/.git || -L .config/.git ]]; then
+      exit 0
+    fi
 
-    - name: Initialize and check out dotconfig on first deployment
-      ansible.builtin.shell: |
-        set -euo pipefail
-        mkdir -p -- .config
-        cd -- .config
-        exec 9<.
-        flock --exclusive 9
-        if [[ -e .git || -L .git ]]; then
-          exit 0
-        fi
+    installer=$(mktemp)
+    trap 'rm -f -- "$installer"' EXIT
+    curl --fail --silent --show-error --location --output "$installer" \
+      https://raw.githubusercontent.com/harryxu/dotconfig/refs/heads/main/install.sh
 
-        # Publish the Git directory only after checkout succeeds, so a failed run can retry.
-        staging=$(mktemp -d .proarch-dotconfig.XXXXXXXX)
-        trap 'rm -rf -- "$staging"' EXIT
-        git init "$staging"
-        git_config=(git --git-dir="$staging/.git" --work-tree=.)
-        "${git_config[@]}" remote add -- origin "$DOTCONFIG_REPO"
-        "${git_config[@]}" fetch origin
-        remote_branch="refs/remotes/origin/$DOTCONFIG_VERSION"
-        if [[ $DOTCONFIG_VERSION == HEAD ]]; then
-          remote_branch=$("${git_config[@]}" symbolic-ref --quiet "$remote_branch" || true)
-        fi
-        if "${git_config[@]}" show-ref --verify --quiet "$remote_branch"; then
-          "${git_config[@]}" checkout --force --track "$remote_branch"
-        else
-          "${git_config[@]}" fetch -- origin "$DOTCONFIG_VERSION"
-          "${git_config[@]}" checkout --force --detach FETCH_HEAD
-        fi
-        mv --no-clobber --no-target-directory -- "$staging/.git" .git
-        test ! -e "$staging/.git"
-        echo 'Initialized dotconfig'
-      args:
-        chdir: "{{ target_home }}"
-        executable: /bin/bash
-      environment:
-        DOTCONFIG_REPO: "{{ dotconfig_repo }}"
-        DOTCONFIG_VERSION: "{{ dotconfig_version }}"
-      register: dotconfig_checkout
-      changed_when: "'Initialized dotconfig' in dotconfig_checkout.stdout_lines"
-      when: not dotconfig_git.stat.exists
+    # An earlier task may have changed the login shell since this session started.
+    SHELL=$(getent passwd "$UID" | cut -d: -f7)
+    export SHELL
+    bash "$installer" || {
+      status=$?
+      # Upstream creates .git early. Keep failed metadata without blocking a retry.
+      if [[ -e .config/.git || -L .config/.git ]]; then
+        backup=$(mktemp -d -- "$HOME/.proarch-dotconfig-failed.XXXXXXXX")
+        mv -- .config/.git "$backup/"
+        echo "Saved incomplete dotconfig Git metadata in $backup/.git" >&2
+      fi
+      exit "$status"
+    }
+    if [[ ! -e .config/.git ]]; then
+      echo 'The dotconfig installer finished without creating ~/.config/.git.' >&2
+      exit 1
+    fi
+    echo 'Initialized dotconfig'
+  args:
+    chdir: "{{ target_home }}"
+    executable: /bin/bash
+  register: dotconfig_install
+  changed_when: "'Initialized dotconfig' in dotconfig_install.stdout_lines"

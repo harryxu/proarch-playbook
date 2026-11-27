@@ -1,10 +1,10 @@
 # Give each configuration file one owner
 
-Shared dotconfig is initialized directly in the target user's `~/.config` so
-the deployed files can be managed with Git. The first deployment force-checks
-out the configured ref and can replace files at paths tracked by that ref.
-Subsequent runs skip existing Git repositories, leaving updates to the user.
-This replaces the separate checkout and allowlisted copies.
+On first deployment the playbook runs the dotconfig installer as the target
+user. The installer owns repository setup in `~/.config` and can replace files
+at tracked paths during checkout. Using the installer also applies dotconfig's
+shared settings and repository hooks. If `~/.config/.git` already exists, the
+playbook skips the entire installer, leaving updates to the user.
 
 Desktop profiles apply their personal overrides after dotconfig initialization.
 Omarchy owns its packaged defaults and generated theme files. Keep these paths

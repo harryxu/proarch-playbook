@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise configuration gates and real dotconfig checkout in temporary homes."""
+"""Exercise configuration gates and dotconfig installation in temporary homes."""
 import configparser
 import json
 import os
@@ -111,7 +111,11 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
     - ansible.builtin.copy:
         dest: "{{ result_file }}"
         content: "{{ {'profile': desktop_profile, 'features': features, 'omarchy': omarchy_settings, 'extra_packages': extra_packages, 'extra_aur_packages': extra_aur_packages} | to_json }}"
-    - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/dotconfig.yml') + """
+    - ansible.builtin.include_tasks:
+        file: """ + str(ROOT / 'tasks/common/dotconfig.yml') + """
+        apply:
+          environment:
+            PATH: "{{ playbook_dir }}/dotconfig-bin:{{ lookup('env', 'PATH') }}"
       when: verify_dotconfig | default(false)
     - ansible.builtin.include_tasks: """ + str(ROOT / 'tasks/common/user_service.yml') + """
       when: verify_user_service | default(false)
@@ -462,46 +466,56 @@ end
                  success=False, check=True)
     assert 'xremap requires the KDE desktop profile.' in output
 
-    # A real Git origin and a prepopulated config directory.
-    source = work / 'source'
-    for name, text in {'nvim/init.lua': 'return {}\n', 'git/config': '[core]\n  editor = nvim\n',
-                       'nvim/space name.lua': 'return "space"\n',
-                       'nvim/line\nbreak.lua': 'return "newline"\n',
-                       'xremap/config.yml': 'modmap: []\n'}.items():
-        path = source / name
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
-    command(['git', 'init', '--initial-branch=main', str(source)])
-    command(['git', '-C', str(source), 'add', '.'])
-    command(['git', '-C', str(source), '-c', 'user.name=Fixture', '-c',
-             'user.email=fixture@example.invalid', 'commit', '-m', 'Fixture'])
+    # Intercept the download so the task can use its real URL without network access.
     home = work / 'home' / '.config'
-    (home / 'nvim').mkdir(parents=True)
-    (home / 'nvim/init.lua').write_text('personal previous content\n')
-    (home / 'omarchy').mkdir()
-    (home / 'omarchy/shell.json').write_text('desktop sentinel\n')
-    deploy = dict(desktop_profile='omarchy', verify_dotconfig=True,
-                  dotconfig_repo=str(source))
+    home.parent.mkdir()
+    installer = work / 'dotconfig install.sh'
+    downloads = work / 'dotconfig-downloads'
+    curl = work / 'dotconfig-bin' / 'curl'
+    curl.parent.mkdir()
+    curl.write_text(f"""#!/bin/bash
+set -euo pipefail
+[[ ${{@: -1}} == https://raw.githubusercontent.com/harryxu/dotconfig/refs/heads/main/install.sh ]]
+while [[ $1 != --output ]]; do shift; done
+echo downloaded >> {shlex.quote(str(downloads))}
+cp -- {shlex.quote(str(installer))} "$2"
+""")
+    curl.chmod(0o755)
+    calls = home.parent / 'installer-calls'
+    installer_script = f"""#!/bin/bash
+set -euo pipefail
+[[ $HOME == {shlex.quote(str(home.parent))} && $# -eq 0 ]]
+echo called >> "$HOME/installer-calls"
+git init --quiet "$HOME/.config"
+[[ ! -e "$HOME/fail-install" ]]
+echo installed > "$HOME/.config/settings"
+"""
+    deploy = dict(desktop_profile='omarchy', verify_dotconfig=True)
     run(deploy, check=True)
-    assert not (home / '.git').exists()
-    run(deploy | {'dotconfig_repo': str(work / 'missing-origin')}, success=False)
-    assert not (home / '.git').exists()
-    assert (home / 'nvim/init.lua').read_text() == 'personal previous content\n'
+    assert not downloads.exists() and not calls.exists() and not home.exists()
+    installer.touch()
+    output = run(deploy, success=False)
+    assert 'without creating ~/.config/.git' in output
+    installer.write_text(installer_script)
+    # Upstream creates .git before later setup steps, so a failure must allow a retry.
+    fail_install = home.parent / 'fail-install'
+    fail_install.touch()
+    run(deploy, success=False)
+    assert calls.read_text().splitlines() == ['called']
+    assert not (home / '.git').exists() and not (home / 'settings').exists()
+    fail_install.unlink()
     run(deploy)
-    git = ['git', '-C', str(home)]
-    assert command(git + ['rev-parse', '--show-toplevel']).strip() == str(home)
-    assert command(git + ['remote', 'get-url', 'origin']).strip() == str(source)
-    assert command(git + ['rev-parse', '--abbrev-ref', '@{upstream}']).strip() == 'origin/main'
-    assert not (home.parent / '.local/share/proarch/dotconfig').exists()
-    assert (home / 'nvim/init.lua').read_text() == 'return {}\n'
-    assert (home / 'nvim/space name.lua').read_text() == 'return "space"\n'
-    assert (home / 'nvim/line\nbreak.lua').read_text() == 'return "newline"\n'
-    assert (home / 'omarchy/shell.json').read_text() == 'desktop sentinel\n'
-    assert (home / 'xremap/config.yml').read_text() == 'modmap: []\n'
-    (home / 'nvim/init.lua').write_text('local edit\n')
-    second = run(deploy | {'dotconfig_repo': str(work / 'missing-origin')})
-    assert re.search(r'changed=0\b', second), second
-    assert (home / 'nvim/init.lua').read_text() == 'local edit\n'
+    assert (home / '.git').is_dir() and (home / 'settings').read_text() == 'installed\n'
+    (home / 'settings').write_text('local edit\n')
+    installer.unlink()  # Even the download must be skipped for an existing repository.
+    assert re.search(r'changed=0\b', run(deploy))
+    # Linked worktrees have a .git file pointing to their Git directory.
+    (home / '.git').rename(work / 'git-dir')
+    (home / '.git').write_text(f"gitdir: {work / 'git-dir'}\n")
+    assert re.search(r'changed=0\b', run(deploy))
+    assert downloads.read_text().splitlines() == ['downloaded'] * 3
+    assert calls.read_text().splitlines() == ['called', 'called']
+    assert (home / 'settings').read_text() == 'local edit\n'
 
     # Exercise both the real service condition and direct startup with a harmless backend.
     launcher = work / 'home/.local/bin/xremap-launcher'
@@ -997,7 +1011,7 @@ printf x >> "$destination/installs"
     stable_themes = sync_themes()
     assert re.search(r'changed=0\b', stable_themes), stable_themes
     print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
-    print('      in-place Git checkout, preserved untracked files and existing repositories,')
+    print('      first-run dotconfig installation, retry after failure and existing repository skips,')
     print('      managed keybinding imports, local precedence, backups and stable reruns,')
     print('      floating fullscreen workaround deployment and adoption of the manual loader,')
     print('      native wallpaper selector links, preserved images and stable theme-change hooks,')
