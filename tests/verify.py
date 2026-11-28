@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Exercise configuration gates and dotconfig installation in temporary homes."""
+"""Run selected playbook integration checks in temporary homes."""
+import argparse
 import configparser
 import json
 import os
 from pathlib import Path
+import pwd
 import re
 import runpy
 import shlex
@@ -17,6 +19,8 @@ ENV.update(ANSIBLE_HOME='/tmp/proarch-ansible-home',
            ANSIBLE_LOCAL_TEMP='/tmp/proarch-ansible-local',
            ANSIBLE_REMOTE_TEMP='/tmp/proarch-ansible-remote',
            ANSIBLE_NOCOLOR='1', ANSIBLE_BECOME_ASK_PASS='false')
+USER = pwd.getpwuid(os.geteuid()).pw_name
+HYPRLAND_DEFAULTS = b'require("default.hypr.toggles")\n-- Keep this personal configuration.\n'
 
 
 def command(args, **kwargs):
@@ -27,8 +31,8 @@ def command(args, **kwargs):
     return result.stdout
 
 
-with tempfile.TemporaryDirectory(prefix='proarch-verify-') as temporary:
-    work = Path(temporary)
+def verify_hyprland_reload(work):
+    """Hyprland reload handler and session context after Snapper preflight."""
     hyprland_fixture = work / 'hyprland'
     hyprland_fixture.mkdir()
     hyprctl = hyprland_fixture / 'hyprctl'
@@ -75,6 +79,9 @@ printf '%s\\n' "$1" >> "$HYPRLAND_TEST_LOG"
              str(hyprland_play), '-i', 'localhost,', '-c', 'local', '-e', 'ansible_become=false'])
     assert hyprland_log.read_text().splitlines() == ['reload', 'configerrors']
 
+
+def verify_snapper(work):
+    """Snapper bootloader detection from EFI entries and loader metadata."""
     bootloader_probe = runpy.run_path(str(ROOT / 'files/snapper/detect-bootloader.py'))
     efi_entries = r"""
 BootOrder: 0001,0002,0003
@@ -93,10 +100,16 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         loader_info.write_bytes(b'\x06\0\0\0' + (product + '\0').encode('utf-16-le'))
         assert bootloader_probe['detect_bootloader'](loader_info) == expected
 
+
+def link_playbook_files(work):
     (work / 'profiles').symlink_to(ROOT / 'profiles', target_is_directory=True)
     (work / 'files').symlink_to(ROOT / 'files', target_is_directory=True)
     (work / 'templates').symlink_to(ROOT / 'templates', target_is_directory=True)
     (work / 'filter_plugins').symlink_to(ROOT / 'filter_plugins', target_is_directory=True)
+
+
+def make_harness(work, **defaults):
+    link_playbook_files(work)
     harness = work / 'verify.yml'
     harness.write_text("""---
 - hosts: all
@@ -111,6 +124,7 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
     - ansible.builtin.copy:
         dest: "{{ result_file }}"
         content: "{{ {'profile': desktop_profile, 'features': features, 'omarchy': omarchy_settings, 'extra_packages': extra_packages, 'extra_aur_packages': extra_aur_packages} | to_json }}"
+      when: verify_config | default(false)
     - ansible.builtin.include_tasks:
         file: """ + str(ROOT / 'tasks/common/dotconfig.yml') + """
         apply:
@@ -132,17 +146,16 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
     - ansible.builtin.template:
         src: """ + str(ROOT / 'templates/omarchy/autostart.lua.j2') + """
         dest: "{{ autostart_file }}"
-      when: desktop_profile == 'omarchy'
+      when: verify_autostart | default(false)
   handlers:
     - name: Reload Hyprland
       ansible.builtin.debug:
         msg: Fixture only; never reload the live desktop.
 """)
-    user = command(['id', '-un']).strip()
     base = dict(ansible_become=False, playbook_config_file=str(work / 'absent.yml'),
-                target_user=user, target_home=str(work / 'home'),
+                target_user=USER, target_home=str(work / 'home'),
                 result_file=str(work / 'result.json'),
-                autostart_file=str(work / 'autostart.lua'))
+                autostart_file=str(work / 'autostart.lua')) | defaults
 
     def run(overrides, success=True, check=False):
         variables = work / 'vars.json'
@@ -156,6 +169,13 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         if (result.returncode == 0) != success:
             raise AssertionError(result.stdout + result.stderr)
         return result.stdout + result.stderr
+
+    return run
+
+
+def verify_config(work):
+    """Profile selection, host config, override precedence and feature switches."""
+    run = make_harness(work, verify_config=True)
 
     for profile in ['', 'gnome', '../../kde']:
         (work / 'result.json').unlink(missing_ok=True)
@@ -173,6 +193,58 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         assert data['features']['apfs_automount'] is False
         assert data['features']['t2_luks_keyboard_workaround'] is False
         assert 't2_usb_hotplug' not in data['features']
+
+    # A copied example is the only host configuration needed for either profile.
+    example_host = work / 'example-config.yml'
+    example = (ROOT / 'config.yml.example').read_text()
+    for profile in ['kde', 'omarchy']:
+        example_host.write_text(example.replace('desktop_profile: omarchy', 'desktop_profile: ' + profile)
+                               .replace('extra_packages: []', 'extra_packages: [jq]')
+                               .replace('extra_aur_packages: []', 'extra_aur_packages: [fixture-aur]'))
+        run(dict(playbook_config_file=str(example_host)))
+        data = json.loads((work / 'result.json').read_text())
+        assert data['profile'] == profile
+        assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
+        assert data['features']['rime_ice'] is True
+        assert data['features']['snapper'] is True
+        assert data['features']['vicinae'] is True
+
+    # Exercise the optional YAML config loader, then CLI precedence and nested merging.
+    host = work / 'config.yml'
+    host.write_text('desktop_profile: kde\nfeature_overrides:\n  docker: false\n')
+    run(dict(playbook_config_file=str(host)))
+    assert json.loads((work / 'result.json').read_text())['profile'] == 'kde'
+    run(dict(playbook_config_file=str(host), desktop_profile='omarchy',
+             omarchy_overrides={'shell': {'idle': {'lock': 42}, 'bar': {'layout': {'right': []}}}}))
+    data = json.loads((work / 'result.json').read_text())
+    assert data['profile'] == 'omarchy' and data['features']['docker'] is False
+    assert data['omarchy']['shell']['idle']['lock'] == 42
+    assert data['omarchy']['shell']['bar']['layout']['right'] == []
+    assert data['omarchy']['shell']['bar']['background'] == 'glassy', 'Nested defaults were lost'
+    assert set(data['omarchy']['shell']['bar']) == {'background', 'layout'}
+    assert data['omarchy']['shell']['dock'] == {'autohide': True}
+    for overrides in [{'docker': 'false'}, {'unknown_feature': True}, {'keybindings': True}]:
+        run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
+    run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
+    assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True
+    run(dict(desktop_profile='omarchy',
+             feature_overrides={'apfs_automount': True, 't2_usb_hotplug': False, 'cliphist': True}))
+    storage_features = json.loads((work / 'result.json').read_text())['features']
+    assert storage_features['apfs_automount'] and 't2_usb_hotplug' not in storage_features
+    assert 'cliphist' not in storage_features
+    output = run(dict(desktop_profile='kde', feature_overrides={'apfs_automount': True}),
+                 success=False)
+    assert 'APFS automount uses the Omarchy desktop session' in output
+    run(dict(desktop_profile='omarchy', feature_overrides={'t2_luks_keyboard_workaround': True}))
+    assert json.loads((work / 'result.json').read_text())['features']['t2_luks_keyboard_workaround']
+    output = run(dict(desktop_profile='kde',
+                      feature_overrides={'t2_luks_keyboard_workaround': True}), success=False)
+    assert 'T2 LUKS keyboard workaround supports Omarchy only' in output
+
+
+def verify_sddm(work):
+    """SDDM autologin across desktop profiles and native drop-ins."""
+    run = make_harness(work)
 
     sddm_config = work / 'sddm.conf'
     sddm_drop_in = work / 'sddm.conf.d/autologin.conf'
@@ -203,6 +275,9 @@ Boot0003* Linux HD(1,GPT,...)/File(\EFI\BOOT\BOOTX64.EFI)
         if has_drop_in:
             assert sddm_drop_in.read_text() == native_login
 
+
+def verify_t2_keyboard(work):
+    """T2 LUKS keyboard module filter and late drop-in."""
     # The legacy installer filter drops every listed module for every kernel.
     # The late drop-in must restore just the optional T2 driver.
     t2_filter = work / 'zz-omarchy-kernel-modules.conf'
@@ -234,6 +309,11 @@ printf '%s\n' "${MODULES[@]}"
         assert command(['bash', '-ec', source_t2_configs, 'fixture', str(t2_filter),
                         drop_in, module]).splitlines() == expected_modules
 
+
+def verify_bindings(work):
+    """Omarchy keybindings, floating-window overrides and managed Lua deployment."""
+    run = make_harness(work)
+
     # Deploy the module and load it before user bindings, without overwriting them.
     bindings_loader = (b'-- BEGIN PROARCH BINDINGS\nrequire("hypr.proarch_bindings")\n'
                        b'-- END PROARCH BINDINGS\n')
@@ -243,7 +323,6 @@ printf '%s\n' "${MODULES[@]}"
                          b' -- Temporary fix for Omarchy #16241.\n')
     zoom_source = (ROOT / 'files/omarchy/hypr/floating_titlebar_zoom.lua').read_bytes()
     zoom_loader = b'require("hypr.floating_titlebar_zoom")\n'
-    hyprland_defaults = b'require("default.hypr.toggles")\n-- Keep this personal configuration.\n'
     for name, initial, expected in [
         ('missing', None, bindings_loader),
         ('personal', personal_bindings, bindings_loader + personal_bindings),
@@ -256,7 +335,7 @@ printf '%s\n' "${MODULES[@]}"
         hyprland_entry = bindings_dir / 'hyprland.lua'
         workaround = bindings_dir / 'floating_fullscreen_workaround.lua'
         # Cover a fresh host and adoption of the previously installed manual loader.
-        hyprland_entry.write_bytes(hyprland_defaults + (workaround_loader if name == 'personal' else b''))
+        hyprland_entry.write_bytes(HYPRLAND_DEFAULTS + (workaround_loader if name == 'personal' else b''))
         if initial is not None:
             local_bindings.write_bytes(initial)
             local_bindings.chmod(0o600)
@@ -266,16 +345,16 @@ printf '%s\n' "${MODULES[@]}"
         assert local_bindings.read_bytes() == expected
         deployed_bindings = managed_bindings.read_bytes()
         command(['luac', '-p', str(managed_bindings)])
-        assert hyprland_entry.read_bytes() == hyprland_defaults + workaround_loader + zoom_loader
+        assert hyprland_entry.read_bytes() == HYPRLAND_DEFAULTS + workaround_loader + zoom_loader
         assert workaround.read_bytes() == workaround_source
         zoom = bindings_dir / 'floating_titlebar_zoom.lua'
         assert zoom.read_bytes() == zoom_source
         command(['luac', '-p', str(workaround)])
         command(['luac', '-p', str(zoom)])
         entry_backups = list(bindings_dir.glob('hyprland.lua.*~'))
-        expected_backups = {hyprland_defaults + workaround_loader}
+        expected_backups = {HYPRLAND_DEFAULTS + workaround_loader}
         if name == 'missing':
-            expected_backups.add(hyprland_defaults)
+            expected_backups.add(HYPRLAND_DEFAULTS)
         assert {backup.read_bytes() for backup in entry_backups} == expected_backups
         if initial is not None:
             assert local_bindings.stat().st_mode & 0o777 == 0o600
@@ -313,6 +392,11 @@ assert((type(clipboard) == 'table' and clipboard.panel or clipboard) == arg[3])
             assert local_bindings.read_bytes() == expected
             command(['lua', str(bindings_runner), str(bindings_home), 'omarchy-menu toggle root',
                      'omarchy.clipboard'])
+
+
+def verify_wallpapers(work):
+    """Omarchy wallpaper links, theme-change hook and stable reruns."""
+    run = make_harness(work)
 
     # Personal wallpapers must appear in the native per-theme selector, including
     # after a theme change, without changing Omarchy's generated backgrounds.
@@ -359,6 +443,11 @@ assert((type(clipboard) == 'table' and clipboard.panel or clipboard) == arg[3])
     assert command(['bash', str(wallpaper_hook), 'fixture-two']) == ''
     theme_state.write_text('fixture-two\n')
     assert re.search(r'changed=0\b', run(wallpaper_config))
+
+
+def verify_keyboard(work):
+    """Omarchy keyboard swaps, device overrides and input validation."""
+    run = make_harness(work)
 
     # Exercise real keyboard deployment and execute its Lua against a fake API.
     keyboard_home = work / 'keyboard-home'
@@ -416,55 +505,10 @@ end
         output = run(dict(desktop_profile='omarchy') | invalid, success=False)
         assert 'keyboard' in output.lower(), output
 
-    # A copied example is the only host configuration needed for either profile.
-    example_host = work / 'example-config.yml'
-    example = (ROOT / 'config.yml.example').read_text()
-    for profile in ['kde', 'omarchy']:
-        example_host.write_text(example.replace('desktop_profile: omarchy', 'desktop_profile: ' + profile)
-                               .replace('extra_packages: []', 'extra_packages: [jq]')
-                               .replace('extra_aur_packages: []', 'extra_aur_packages: [fixture-aur]'))
-        run(dict(playbook_config_file=str(example_host)))
-        data = json.loads((work / 'result.json').read_text())
-        assert data['profile'] == profile
-        assert data['extra_packages'] == ['jq'] and data['extra_aur_packages'] == ['fixture-aur']
-        assert data['features']['rime_ice'] is True
-        assert data['features']['snapper'] is True
-        assert data['features']['vicinae'] is True
 
-    # Exercise the optional YAML config loader, then CLI precedence and nested merging.
-    host = work / 'config.yml'
-    host.write_text('desktop_profile: kde\nfeature_overrides:\n  docker: false\n')
-    run(dict(playbook_config_file=str(host)))
-    assert json.loads((work / 'result.json').read_text())['profile'] == 'kde'
-    run(dict(playbook_config_file=str(host), desktop_profile='omarchy',
-             omarchy_overrides={'shell': {'idle': {'lock': 42}, 'bar': {'layout': {'right': []}}}}))
-    data = json.loads((work / 'result.json').read_text())
-    assert data['profile'] == 'omarchy' and data['features']['docker'] is False
-    assert data['omarchy']['shell']['idle']['lock'] == 42
-    assert data['omarchy']['shell']['bar']['layout']['right'] == []
-    assert data['omarchy']['shell']['bar']['background'] == 'glassy', 'Nested defaults were lost'
-    assert set(data['omarchy']['shell']['bar']) == {'background', 'layout'}
-    assert data['omarchy']['shell']['dock'] == {'autohide': True}
-    for overrides in [{'docker': 'false'}, {'unknown_feature': True}, {'keybindings': True}]:
-        run(dict(desktop_profile='omarchy', feature_overrides=overrides), success=False)
-    run(dict(desktop_profile='kde', feature_overrides={'keybindings': True}))
-    assert json.loads((work / 'result.json').read_text())['features']['keybindings'] is True
-    run(dict(desktop_profile='omarchy',
-             feature_overrides={'apfs_automount': True, 't2_usb_hotplug': False, 'cliphist': True}))
-    storage_features = json.loads((work / 'result.json').read_text())['features']
-    assert storage_features['apfs_automount'] and 't2_usb_hotplug' not in storage_features
-    assert 'cliphist' not in storage_features
-    output = run(dict(desktop_profile='kde', feature_overrides={'apfs_automount': True}),
-                 success=False)
-    assert 'APFS automount uses the Omarchy desktop session' in output
-    run(dict(desktop_profile='omarchy', feature_overrides={'t2_luks_keyboard_workaround': True}))
-    assert json.loads((work / 'result.json').read_text())['features']['t2_luks_keyboard_workaround']
-    output = run(dict(desktop_profile='kde',
-                      feature_overrides={'t2_luks_keyboard_workaround': True}), success=False)
-    assert 'T2 LUKS keyboard workaround supports Omarchy only' in output
-    output = run(dict(desktop_profile='omarchy', verify_xremap_entry=True),
-                 success=False, check=True)
-    assert 'xremap requires the KDE desktop profile.' in output
+def verify_dotconfig(work):
+    """Dotconfig installation, failure recovery and existing checkout detection."""
+    run = make_harness(work)
 
     # Intercept the download so the task can use its real URL without network access.
     home = work / 'home' / '.config'
@@ -517,6 +561,15 @@ echo installed > "$HOME/.config/settings"
     assert calls.read_text().splitlines() == ['called', 'called']
     assert (home / 'settings').read_text() == 'local edit\n'
 
+
+def verify_xremap(work):
+    """KDE-only xremap entry point, launcher and session guard."""
+    run = make_harness(work)
+    home = work / 'home' / '.config'
+    output = run(dict(desktop_profile='omarchy', verify_xremap_entry=True),
+                 success=False, check=True)
+    assert 'xremap requires the KDE desktop profile.' in output
+
     # Exercise both the real service condition and direct startup with a harmless backend.
     launcher = work / 'home/.local/bin/xremap-launcher'
     launcher.parent.mkdir(parents=True)
@@ -548,6 +601,12 @@ echo installed > "$HOME/.config/settings"
         assert marker.exists() == allowed, f'xremap startup guard failed for {desktop!r}'
         if allowed:
             assert marker.read_text().splitlines() == [str(home / 'xremap/config.yml'), '--watch']
+
+
+def verify_user_service(work):
+    """Offline systemd user service enablement and stable reruns."""
+    run = make_harness(work)
+    home = work / 'home' / '.config'
     # Enabling a user service must also work without a running user bus.
     units = home / 'systemd/user'
     units.mkdir(parents=True)
@@ -560,9 +619,20 @@ echo installed > "$HOME/.config/settings"
     run(offline)
     assert (units / 'graphical-session.target.wants/proarch-fixture.service').is_symlink()
     assert re.search(r'changed=0\b', run(offline)), 'Offline service enable is not idempotent'
+
+
+def verify_autostart(work):
+    """Omarchy autostart template rendering and Lua syntax checks."""
+    run = make_harness(work, verify_autostart=True)
+    run(dict(desktop_profile='omarchy'))
     command(['luac', '-p', str(work / 'autostart.lua')])
     for path in (ROOT / 'files/omarchy/hypr').glob('*.lua'):
         command(['luac', '-p', str(path)])
+
+
+def verify_app_themes(work):
+    """Omarchy app theme opt-outs, browser policies and editor bridges."""
+    link_playbook_files(work)
 
     # Deploy Omarchy opt-outs and release only legacy forced Chrome theme policies.
     app_home = work / 'app-home'
@@ -610,7 +680,7 @@ echo installed > "$HOME/.config/settings"
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars_files': [str(ROOT / 'default.config.yml')],
         'vars': {'desktop_profile': 'omarchy', 'target_home': str(app_home),
-                 'target_user': user, 'proarch_policy_root': str(policy_root),
+                 'target_user': USER, 'proarch_policy_root': str(policy_root),
                  'playbook_config_file': str(work / 'absent.yml')},
         'environment': {'HOME': str(app_home)},
         'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/configuration.yml')},
@@ -620,7 +690,7 @@ echo installed > "$HOME/.config/settings"
     def configure_app_themes(overrides=None):
         return command(['ansible-playbook', str(app_play), '-i', 'localhost,', '-c', 'local',
                         '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
-                                         'target_user': user, 'playbook_config_file': str(work / 'absent.yml'),
+                                         'target_user': USER, 'playbook_config_file': str(work / 'absent.yml'),
                                          'omarchy_overrides': overrides or {}})])
 
     configure_app_themes()
@@ -682,10 +752,84 @@ echo installed > "$HOME/.config/settings"
                    env=app_environment, check=True)
     assert native_marker.read_text() == 'literal argument\n'
     browser_flag.touch()
+
+    # Resolve through login Bash and fish without executing any native retint.
+    resolved = subprocess.run(['bash', '-lc', 'command -v omarchy-theme-set-browser'],
+                              env=app_environment, text=True, capture_output=True, check=True)
+    assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser'), resolved.stdout
+    if shutil.which('fish'):
+        resolved = subprocess.run(['fish', '--no-config', '-c',
+                                   'source "$HOME/.config/fish/conf.d/proarch-app-themes.fish"; command -s omarchy-theme-set-browser'],
+                                  env=app_environment, text=True, capture_output=True, check=True)
+        assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser')
+    assert code_settings.read_text() == original_code
+    assert json.loads(chrome_policy.read_text()) == {'BrowserSignin': 0}
+    assert firefox_policy.read_bytes() == original_firefox
+    # Users may change their application theme; redeployment must leave it alone.
+    # A user-created regular theme file is retained on later deployments.
+    custom_nvim = 'return { { "LazyVim/LazyVim", opts = { colorscheme = "user-theme" } } }\n'
+    nvim_theme.write_text(custom_nvim)
+    custom_code = original_code.replace('Light+', 'User-selected dark theme')
+    code_settings.write_text(custom_code)
+    stable_apps = configure_app_themes()
+    assert re.search(r'changed=0\b', stable_apps), stable_apps
+    assert code_settings.read_text() == custom_code
+    assert nvim_theme.read_text() == custom_nvim
+    assert all(path.read_bytes() == content for path, content in editor_originals.items())
+
+    # Test broken legacy links and unrelated personal links with the real tasks.
+    link_cases = [
+        ('legacy', '../../../omarchy/current/theme/neovim.lua', True),
+        ('legacy-home', '~/.config/omarchy/current/theme/neovim.lua', True),
+        ('absolute', str(app_home / '.local/state/omarchy/current/theme/neovim.lua'), True),
+        ('personal', 'personal-theme.lua', False),
+    ]
+    fixture_homes = []
+    for label, target, remove in link_cases:
+        fixture_home = work / ('editor-' + label)
+        link = fixture_home / '.config/nvim/lua/plugins/theme.lua'
+        link.parent.mkdir(parents=True)
+        # Absolute targets belong to their own fixture home.
+        if label == 'absolute':
+            target = str(fixture_home / '.local/state/omarchy/current/theme/neovim.lua')
+        link.symlink_to(target)
+        fixture_homes.append(str(fixture_home))
+    bridge_play = work / 'editor-bridges.yml'
+    bridge_play.write_text(json.dumps([{
+        'name': 'Verify known and personal editor bridges',
+        'hosts': 'all', 'gather_facts': False, 'become': False,
+        'tasks': [{'ansible.builtin.include_tasks': str(ROOT / 'tasks/desktop/omarchy/neovim_theme.yml'),
+                   'loop': fixture_homes, 'vars': {'target_home': '{{ item }}'}}],
+    }]))
+    bridge_cmd = ['ansible-playbook', str(bridge_play), '-i', 'localhost,', '-c', 'local']
+    command(bridge_cmd)
+    for (label, target, remove), fixture_home in zip(link_cases, fixture_homes):
+        link = Path(fixture_home) / '.config/nvim/lua/plugins/theme.lua'
+        assert link.is_symlink() != remove, label
+        backups = list(link.parent.glob('theme.lua.proarch-backup-*'))
+        assert len(backups) == int(remove), label
+        if not remove:
+            assert str(link.readlink()) == target
+    assert re.search(r'changed=0\b', command(bridge_cmd))
+
+
+def verify_shell(work):
+    """Omarchy Shell layout, plugin preferences and host-owned desktop settings."""
+    link_playbook_files(work)
+    home = work / 'shell-home'
+    fake_native = work / 'fake-native-omarchy'
+    (fake_native / 'bin').mkdir(parents=True)
+    native_marker = work / 'theme-retint-calls'
+    for name in ['omarchy-theme-set-browser', 'omarchy-theme-set-firefox']:
+        binary = fake_native / 'bin' / name
+        binary.write_text('#!/bin/bash\nprintf "%s\\n" "$@" >> "$THEME_TEST_MARKER"\n')
+        binary.chmod(0o755)
+
     # Exercise real desktop tasks with a fake Omarchy CLI, never the live desktop.
     # Fonts and monitors belong to each host, even when other preferences change.
-    (app_home / '.config/hypr').mkdir(parents=True)
-    (app_home / '.config/hypr/hyprland.lua').write_bytes(hyprland_defaults)
+    (home / '.config/hypr').mkdir(parents=True)
+    (home / '.config/hypr/hyprland.lua').write_bytes(HYPRLAND_DEFAULTS)
+    (home / '.config/omarchy').mkdir()
     fake_cli = fake_native / 'bin/omarchy'
     theme_command_marker = work / 'unexpected-theme-command'
     fake_cli.write_text('''#!/bin/bash
@@ -718,10 +862,10 @@ exit 0
         'name': 'Verify desktop configuration preserves host fonts, monitors and theme',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars_files': [str(ROOT / 'default.config.yml')],
-        'vars': {'target_home': str(app_home),
+        'vars': {'target_home': str(home),
                  'ansible_facts': {'env': {'PATH': str(fake_native / 'bin') + ':' + ENV['PATH'],
                                           'OMARCHY_PATH': str(fake_native)}}},
-        'environment': {'HOME': str(app_home), 'OMARCHY_PATH': str(fake_native),
+        'environment': {'HOME': str(home), 'OMARCHY_PATH': str(fake_native),
                         'THEME_TEST_MARKER': str(native_marker),
                         'THEME_COMMAND_MARKER': str(theme_command_marker),
                         'PATH': str(fake_native / 'bin') + ':' + ENV['PATH']},
@@ -733,9 +877,9 @@ exit 0
     }]))
     shell_cmd = ['ansible-playbook', str(shell_play), '-i', 'localhost,', '-c', 'local',
              '-e', json.dumps({'ansible_become': False, 'desktop_profile': 'omarchy',
-                              'target_user': user, 'playbook_config_file': str(work / 'absent.yml')})]
+                              'target_user': USER, 'playbook_config_file': str(work / 'absent.yml')})]
     command(shell_cmd)
-    host_owned_paths = [app_home / relative for relative in [
+    host_owned_paths = [home / relative for relative in [
         '.config/hypr/monitors.lua',
         '.config/omarchy/shell.toml',
         '.config/fontconfig/conf.d/99-proarch-fonts.conf',
@@ -752,7 +896,7 @@ exit 0
     for path, content in desktop_originals.items():
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(content)
-    shell_json = app_home / '.config/omarchy/shell.json'
+    shell_json = home / '.config/omarchy/shell.json'
     shell_data = json.loads(shell_json.read_text())
     assert shell_data['bar'] == {
         'background': 'glassy', 'position': 'bottom',
@@ -830,67 +974,26 @@ exit 0
     assert all(path.read_bytes() == content for path, content in desktop_originals.items()), \
         'Desktop deployment overwrote host font or monitor settings'
     assert not theme_command_marker.exists(), 'Shell deployment queried or switched the system theme'
-    assert native_marker.read_text() == 'literal argument\n', 'Shell deployment retinted applications'
-    # Resolve through login Bash and fish without executing any native retint.
-    resolved = subprocess.run(['bash', '-lc', 'command -v omarchy-theme-set-browser'],
-                              env=app_environment, text=True, capture_output=True, check=True)
-    assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser'), resolved.stdout
-    if shutil.which('fish'):
-        resolved = subprocess.run(['fish', '--no-config', '-c',
-                                   'source "$HOME/.config/fish/conf.d/proarch-app-themes.fish"; command -s omarchy-theme-set-browser'],
-                                  env=app_environment, text=True, capture_output=True, check=True)
-        assert resolved.stdout.strip() == str(guard_bin / 'omarchy-theme-set-browser')
-    assert code_settings.read_text() == original_code
-    assert json.loads(chrome_policy.read_text()) == {'BrowserSignin': 0}
-    assert firefox_policy.read_bytes() == original_firefox
-    # Users may change their application theme; redeployment must leave it alone.
-    # A user-created regular theme file is retained on later deployments.
-    custom_nvim = 'return { { "LazyVim/LazyVim", opts = { colorscheme = "user-theme" } } }\n'
-    nvim_theme.write_text(custom_nvim)
-    custom_code = original_code.replace('Light+', 'User-selected dark theme')
-    code_settings.write_text(custom_code)
-    stable_apps = configure_app_themes()
-    assert re.search(r'changed=0\b', stable_apps), stable_apps
-    assert code_settings.read_text() == custom_code
-    assert nvim_theme.read_text() == custom_nvim
-    assert all(path.read_bytes() == content for path, content in editor_originals.items())
-
-    # Test broken legacy links and unrelated personal links with the real tasks.
-    link_cases = [
-        ('legacy', '../../../omarchy/current/theme/neovim.lua', True),
-        ('legacy-home', '~/.config/omarchy/current/theme/neovim.lua', True),
-        ('absolute', str(app_home / '.local/state/omarchy/current/theme/neovim.lua'), True),
-        ('personal', 'personal-theme.lua', False),
-    ]
-    fixture_homes = []
-    for label, target, remove in link_cases:
-        fixture_home = work / ('editor-' + label)
-        link = fixture_home / '.config/nvim/lua/plugins/theme.lua'
-        link.parent.mkdir(parents=True)
-        # Absolute targets belong to their own fixture home.
-        if label == 'absolute':
-            target = str(fixture_home / '.local/state/omarchy/current/theme/neovim.lua')
-        link.symlink_to(target)
-        fixture_homes.append(str(fixture_home))
-    bridge_play = work / 'editor-bridges.yml'
-    bridge_play.write_text(json.dumps([{
-        'name': 'Verify known and personal editor bridges',
-        'hosts': 'all', 'gather_facts': False, 'become': False,
-        'tasks': [{'ansible.builtin.include_tasks': str(ROOT / 'tasks/desktop/omarchy/neovim_theme.yml'),
-                   'loop': fixture_homes, 'vars': {'target_home': '{{ item }}'}}],
-    }]))
-    bridge_cmd = ['ansible-playbook', str(bridge_play), '-i', 'localhost,', '-c', 'local']
-    command(bridge_cmd)
-    for (label, target, remove), fixture_home in zip(link_cases, fixture_homes):
-        link = Path(fixture_home) / '.config/nvim/lua/plugins/theme.lua'
-        assert link.is_symlink() != remove, label
-        backups = list(link.parent.glob('theme.lua.proarch-backup-*'))
-        assert len(backups) == int(remove), label
-        if not remove:
-            assert str(link.readlink()) == target
-    assert re.search(r'changed=0\b', command(bridge_cmd))
+    assert not native_marker.exists(), 'Shell deployment retinted applications'
 
 
+def commit_fixture(repo, message):
+    command(['git', '-C', str(repo), 'add', '.'])
+    command(['git', '-C', str(repo), '-c', 'user.name=Fixture', '-c',
+             'user.email=fixture@example.invalid', 'commit', '-m', message])
+
+
+def git_fixture_environment(home):
+    return {
+        'HOME': str(home),
+        'GIT_CONFIG_GLOBAL': '/dev/null',
+        'GIT_CONFIG_NOSYSTEM': '1',
+        'GIT_ALLOW_PROTOCOL': 'file',
+    }
+
+
+def verify_kde_themes(work):
+    """KDE theme source updates, installers and stable reruns."""
     # Real KDE sync tasks against a local upstream; installer stubs stay inside /tmp.
     upstream = work / 'theme-upstream'
     upstream.mkdir()
@@ -909,23 +1012,16 @@ printf x >> "$destination/installs"
 ''')
     installer.chmod(0o755)
     command(['git', 'init', '--initial-branch=main', str(upstream)])
-    command(['git', '-C', str(upstream), 'add', '.'])
-    command(['git', '-C', str(upstream), '-c', 'user.name=Fixture', '-c',
-             'user.email=fixture@example.invalid', 'commit', '-m', 'Theme version one'])
+    commit_fixture(upstream, 'Theme version one')
     first_revision = command(['git', '-C', str(upstream), 'rev-parse', 'HEAD']).strip()
     theme_home = work / 'theme-home'
     theme_play = work / 'themes.yml'
-    theme_environment = {
-        'HOME': str(theme_home),
-        'GIT_CONFIG_GLOBAL': '/dev/null',
-        'GIT_CONFIG_NOSYSTEM': '1',
-        'GIT_ALLOW_PROTOCOL': 'file',
-    }
+    theme_environment = git_fixture_environment(theme_home)
     theme_play.write_text(json.dumps([{
         'name': 'Verify live KDE theme updates in a disposable home',
         'hosts': 'all', 'gather_facts': False, 'become': False,
         'vars': {
-            'target_home': str(theme_home), 'target_user': user,
+            'target_home': str(theme_home), 'target_user': USER,
             'profile_defaults': {
                 'theme_repositories': {name: str(upstream) for name in ['graphite', 'aqua', 'tela']},
             },
@@ -947,11 +1043,31 @@ printf x >> "$destination/installs"
         assert (destination / 'installs').read_text() == 'x', 'Initial install ran twice'
     stable_themes = sync_themes()
     assert re.search(r'changed=0\b', stable_themes), stable_themes
+
+    # Also cover migration from a detached, previously pinned checkout.
+    graphite_checkout = theme_home / '.local/share/proarch/themes/graphite'
+    command(['git', '-C', str(graphite_checkout), 'checkout', '--detach', first_revision])
+    (upstream / 'version.txt').write_text('two\n')
+    commit_fixture(upstream, 'Theme version two')
+    sync_themes()
+    for destination in destinations:
+        assert (destination / 'version.txt').read_text() == 'two\n'
+        assert (destination / 'installs').read_text() == 'xx', 'Update did not install exactly once'
+    aqua = theme_home / '.local/share/kwin/tabbox/AquaMediumIcons/version.txt'
+    assert aqua.read_text() == 'two\n'
+    stable_themes = sync_themes()
+    assert re.search(r'changed=0\b', stable_themes), stable_themes
+
+
+def verify_omarchy_plugins(work):
+    """Omarchy plugin installation and preservation of existing checkouts."""
+    upstream = work / 'plugin-upstream'
+    upstream.mkdir()
+    command(['git', 'init', '--initial-branch=main', str(upstream)])
+    (upstream / 'version.txt').write_text('one\n')
     # Omarchy plugins also default to HEAD when no version is supplied.
     (upstream / 'manifest.json').write_text(json.dumps({'id': 'fixture.plugin'}))
-    command(['git', '-C', str(upstream), 'add', 'manifest.json'])
-    command(['git', '-C', str(upstream), '-c', 'user.name=Fixture', '-c',
-             'user.email=fixture@example.invalid', 'commit', '-m', 'Add test plugin manifest'])
+    commit_fixture(upstream, 'Initial test plugin')
     plugin_home = work / 'plugin-home'
     plugin_play = work / 'plugin.yml'
     plugin_play.write_text(json.dumps([{
@@ -960,7 +1076,7 @@ printf x >> "$destination/installs"
         'vars': {'target_home': str(plugin_home), 'omarchy_settings': {
             'plugins': [{'id': 'fixture.plugin', 'repo': str(upstream)}],
         }},
-        'environment': theme_environment | {'HOME': str(plugin_home)},
+        'environment': git_fixture_environment(plugin_home),
         'tasks': [{'ansible.builtin.import_tasks': str(ROOT / 'tasks/desktop/omarchy/plugins.yml')}],
         'handlers': [{'name': 'Rescan Omarchy plugins', 'ansible.builtin.debug': {
             'msg': 'Offline fixture received plugin rescan notification',
@@ -974,9 +1090,7 @@ printf x >> "$destination/installs"
     plugin_file = plugin_home / '.config/omarchy/plugins/fixture.plugin/version.txt'
     assert plugin_file.read_text() == 'one\n'
     (upstream / 'version.txt').write_text('plugin latest\n')
-    command(['git', '-C', str(upstream), 'add', 'version.txt'])
-    command(['git', '-C', str(upstream), '-c', 'user.name=Fixture', '-c',
-             'user.email=fixture@example.invalid', 'commit', '-m', 'Update test plugin'])
+    commit_fixture(upstream, 'Update test plugin')
     # Existing clean installations must not update when upstream advances.
     stable_plugin = sync_plugin()
     assert re.search(r'changed=0\b', stable_plugin), stable_plugin
@@ -995,30 +1109,48 @@ printf x >> "$destination/installs"
     # A manually installed plugin need not be a Git checkout.
     (plugin_checkout / '.git').rename(plugin_checkout / '.git.saved')
     assert re.search(r'changed=0\b', sync_plugin())
-    # Also cover migration from a detached, previously pinned checkout.
-    graphite_checkout = theme_home / '.local/share/proarch/themes/graphite'
-    command(['git', '-C', str(graphite_checkout), 'checkout', '--detach', first_revision])
-    (upstream / 'version.txt').write_text('two\n')
-    command(['git', '-C', str(upstream), 'add', 'version.txt'])
-    command(['git', '-C', str(upstream), '-c', 'user.name=Fixture', '-c',
-             'user.email=fixture@example.invalid', 'commit', '-m', 'Theme version two'])
-    sync_themes()
-    for destination in destinations:
-        assert (destination / 'version.txt').read_text() == 'two\n'
-        assert (destination / 'installs').read_text() == 'xx', 'Update did not install exactly once'
-    aqua = theme_home / '.local/share/kwin/tabbox/AquaMediumIcons/version.txt'
-    assert aqua.read_text() == 'two\n'
-    stable_themes = sync_themes()
-    assert re.search(r'changed=0\b', stable_themes), stable_themes
-    print('PASS: explicit selection, both profiles, override precedence, invalid settings,')
-    print('      first-run dotconfig installation, retry after failure and existing repository skips,')
-    print('      managed keybinding imports, local precedence, backups and stable reruns,')
-    print('      floating fullscreen workaround deployment and adoption of the manual loader,')
-    print('      native wallpaper selector links, preserved images and stable theme-change hooks,')
-    print('      host/device keyboard mappings, preserved input options, rollback and stable reruns,')
-    print('      KDE-only xremap entry, configuration, launcher and service condition,')
-    print('      latest KDE sources, source-change installation and stable reruns,')
-    print('      install-only Omarchy plugins, preserved clean/local/manual installs and stable reruns,')
-    print('      Omarchy retint opt-outs, Neovim bridge backups, preserved Vim/editor themes,')
-    print('      host-owned fonts and monitors, preserved personal Shell font preferences,')
-    print('      second-run idempotence, offline service enable and Lua parsing. No live configuration changed.')
+
+
+GROUPS = {
+    'config': verify_config,
+    'bindings': verify_bindings,
+    'keyboard': verify_keyboard,
+    'wallpapers': verify_wallpapers,
+    'shell': verify_shell,
+    'app-themes': verify_app_themes,
+    'autostart': verify_autostart,
+    'hyprland-reload': verify_hyprland_reload,
+    'omarchy-plugins': verify_omarchy_plugins,
+    'kde-themes': verify_kde_themes,
+    'xremap': verify_xremap,
+    'sddm': verify_sddm,
+    'dotconfig': verify_dotconfig,
+    'user-service': verify_user_service,
+    'snapper': verify_snapper,
+    't2-keyboard': verify_t2_keyboard,
+}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--list', action='store_true', help='list available groups and exit')
+    parser.add_argument('groups', nargs='*', metavar='GROUP',
+                        help='groups to run (default: all; see --list)')
+    args = parser.parse_args()
+    for name in args.groups:
+        if name not in GROUPS:
+            parser.error(f'unknown group {name!r}; use --list to see available groups')
+    if args.list:
+        for name, verify in GROUPS.items():
+            print(f'{name:17} {verify.__doc__}')
+        return
+
+    for name in dict.fromkeys(args.groups or GROUPS):
+        print(f'RUN  {name}', flush=True)
+        with tempfile.TemporaryDirectory(prefix=f'proarch-verify-{name}-', dir='/tmp') as temporary:
+            GROUPS[name](Path(temporary))
+        print(f'PASS {name}', flush=True)
+
+
+if __name__ == '__main__':
+    main()

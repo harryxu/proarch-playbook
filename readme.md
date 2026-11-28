@@ -439,6 +439,27 @@ ansible-lint --offline
 python3 tests/verify.py
 ```
 
+For a focused change, pass one or more group names to the integration runner.
+Omit the names to run the full suite.
+
+```sh
+python3 tests/verify.py --list
+python3 tests/verify.py bindings
+python3 tests/verify.py bindings keyboard
+```
+
+| Changed configuration | Test group |
+| --- | --- |
+| Shared or desktop defaults, host overrides, feature validation | `config` |
+| Omarchy keybindings or floating-window overrides | `bindings` |
+| Omarchy keyboard mappings or device overrides | `keyboard` |
+| Omarchy autostart template | `autostart` |
+| Omarchy Shell preferences, wallpapers, app theme protection, or plugin installation | `shell`, `wallpapers`, `app-themes`, or `omarchy-plugins`, respectively |
+| Hyprland reload handler or Snapper preflight | `hyprland-reload` |
+| Snapper bootloader detection or T2 LUKS keyboard drop-in | `snapper` or `t2-keyboard`, respectively |
+| KDE theme sources or xremap | `kde-themes` or `xremap`, respectively |
+| Dotconfig, SDDM autologin, or systemd user services | `dotconfig`, `sddm`, or `user-service`, respectively |
+
 The integration checks use disposable local Git repositories and homes under
 `/tmp`. They cover required selection, both profiles, override precedence,
 invalid settings, in-place Git checkout and retries, preservation of unrelated

@@ -32,7 +32,12 @@ development environment with an explicit KDE or Omarchy desktop profile.
 ## Validation
 
 Install collections with `ansible-galaxy collection install -r requirements.yml`.
-Run syntax checks for both profiles and `python3 tests/verify.py`.
+For Ansible changes, run syntax checks for both profiles. Prefer focused
+integration checks with `python3 tests/verify.py GROUP [GROUP ...]` and select
+the groups that cover the changed configuration. Use `python3 tests/verify.py --list`
+or the [test group guide](readme.md#layout-and-checks) to find them.
+Run the full suite with `python3 tests/verify.py` when the change may affect
+behavior beyond the selected groups or when the user requests it.
 The integration suite operates only in disposable directories under `/tmp`.
 A full playbook run changes the host; use `test.yml` for prerequisite checks.
 
